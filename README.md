@@ -14,4 +14,4 @@
 
 ## Fragmentos de Código Reutilizado
 
--> acá agregar el esqueleto de manejo de sincronización entre master y slave
+-> acá agregar el esqueleto de manejo de sincronización entre master y slave (dado en clase)

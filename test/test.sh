@@ -1,0 +1,1 @@
+# aca irian todos los scripts de testeo (comparar los hash, correr valgrind, pvs, distintos files de argumento, sin argumentos, etc.)

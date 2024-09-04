@@ -23,6 +23,7 @@ int make_child_process() {
     if(pipe(appToSlave) < 0|| pipe(slaveToApp) < 0) {
         fprintf(stderr, "Error creating pipe");
         return ERROR; 
+    }
     
     // Fork parent process
     pid_t pid = fork();
@@ -51,8 +52,6 @@ int make_child_process() {
             return ERROR; 
         }
         
-        
     }
 
-}
 }

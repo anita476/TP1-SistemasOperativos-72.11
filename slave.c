@@ -2,8 +2,6 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-#include <unistd.h>
-
 
 // slave starts and reads from stdin , and afterwards writes to stdout
 // in master we should change STDIN_FILENO and STDOUT_FILENO 

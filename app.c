@@ -2,13 +2,14 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-#include <unistd.h>
+
 #include <errno.h>
 #include <sys/select.h>
+#include <sys/mman.h>
 
 int make_child_process();
-// create shared memory
-// create fd set for select 
+int create_shared_memory(char * shmName, off_t offset);
+fd_set createFdSet(int * fdv, int dim);
 
 int main(int argc, char * argv[]) {
     // Check if the amount of arguments is valid
@@ -82,8 +83,29 @@ int make_child_process(int * readDescriptor, int * writeDescriptor) {
 
 }
 
+/* testear luego */
+int create_shared_memory(char * shmName, off_t offsets) {
+    shm_unlink(shmName);
+    int shmFD = shm_open(shmName, O_RDWR | O_CREATE | O_EXCL);
+    if(shmFD == ERROR) {
+        return ERROR; 
+    }
+    if (ftruncate(shmFD, offset) == ERROR) {
+        return ERROR;
+    }
+    void * address = mmap(NULL, offset, PROT_READ | PROT_WRITE, MAP_SHARED, shmFD,0);
+    if(address == MAP_FAILED) {
+        return ERROR;
+    }
+    return 0;
+}
 
-
-
-
-
+fd_set createFdSet(int * fdv, int dim) {
+    fd_set toReturn;
+    // To avoid "trash"
+    FD_ZERO(&toReturn);
+    for (int i = 0; i < dim; i++) {
+        FD_SET(fdv[i], &toReturn);
+    }
+    return toReturn;
+}

@@ -17,7 +17,7 @@ int main(){
     // where we'll store the
     char result[MAX_HASH];
 
-    // we read from stands
+    // we read from "stdin" (file descriptor is a mistery)
     // dont remember why the -1 de PI 
     int n;
     while((n = read(STDIN_FILENO, filePath, sizeof(filePath) -1))){

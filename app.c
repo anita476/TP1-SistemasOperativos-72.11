@@ -34,7 +34,7 @@ int make_child_process() {
     }
     
     // Child process 
-    if (pid > 0) {
+    if (pid == 0) {
         // Close child file descriptors 
         if (close(appToSlave[WRITE_END]) || close(slaveToApp[READ_END])) {
             fprintf(stderr, "Error closing pipe ends");
@@ -54,4 +54,5 @@ int make_child_process() {
         
     }
 
+}
 }

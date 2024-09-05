@@ -10,8 +10,8 @@
 #include <sys/stat.h> // moverlo a lib.h, para las macros S_IRUSR y  S_
 
 int make_child_process();
-int create_shared_memory(char * shmName, off_t length);
-void wait_for_view();
+int create_shared_memory(char * shmName, off_t length, void * address);
+void wait_for_view(char * shmName);
 fd_set createFdSet(int * fdv, int dim);
 
 int main(int argc, char * argv[]) {
@@ -26,60 +26,46 @@ int main(int argc, char * argv[]) {
     // _IONBF : unbuffered 
     setvbuf(stdout, NULL, _IONBF, 0); 
 
-    // Local variables for shared memory & semaphore (maybe its better to use a TAD)
-
-    // create shared memory & semaphore 
-    char * shmName = SHM_NAME; 
-    int shmFd;
-    void * shmAddr; 
-
-    char * semRead;
-    sem_t semReadAddr = SEM_READ_NAME; 
-    char * semClose; 
-    sem_t semCloseAddr = SEM_CLOSE_NAME; 
-
     // create file for output 
     char * outputFilename = "output.txt";
     FILE * output;
     if ((output = fopen(outputFilename, "w")) == NULL) {
         fprintf(stderr, "Error creating output file");
-        exit(ERROR); 
+        exit(1); 
+    }
+    
+     // Local variables for shared memory & semaphore (maybe its better to use a TAD)
+    // create shared memory & semaphore 
+    char * shmName = SHM_NAME; 
+    int shmFd;
+    void * shmAddr; 
+
+    //unlink  sem just  in case (to avoid repetition)
+    sem_unlink(SEM_NAME);
+
+    sem_t semaphore = sem_open(SEM_NAME, O_CREAT, 0660, 0); 
+    if (semaphore == SEM_FAILED) {
+        fprintf(stderr, "Error creating semaphore\n");
+        exit(1);
     }
 
-    wait_for_view();
 
     // Local variables for files 
-    int maxNumFiles = argc-1; // esto no se 
-    int numSlaves = logic_for_num_slaves(maxNumFiles); // create a logic for numSlaves e.g. para 100 files quiero 10 esclavos, cada uno que procese 10 files 
+    int numFiles = argc-1; // esto no se  -> its okey (argv[0] is ./app)
+    int numSlaves = logic_for_num_slaves(numFiles); // todo create a logic for numSlaves e.g. para 100 files quiero 10 esclavos, cada uno que procese 10 files 
 
     // create shared memory 
     create_shared_memory(shmName, shmFd, shmAddr);
 
-    char * semRead = SEM_READ_NAME; // put these in the header
-    char * semExit = SEM_EXIT_NAME; 
-
-    // create named semaphores 
-    sem_t semReadAddr = sem_open(semRead, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 0);
-    if (semReadAddr == SEM_FAILED) {
-        fprintf(stderr, "Error creating READ semaphore");
-        exit(ERROR);
-    }
-
-    sem_t semExitAddr = sem_open(semExit, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, 0);
-    if (semExitAddr == SEM_FAILED) {
-        fprintf(stderr, "Error creating EXIT semaphore");
-        exit(ERROR);
-    }
-
-
-    // printf("%d", make_child_process());
-
+    wait_for_view(shmName); // should we pass length of shm ? && it should wait when shm is already created creo
+    
+    
     // Select buffers 
 
     // Vectors -- option 2: childPidV[numSlaves][2]
     pid_t readFdV[numSlaves]; 
     pid_t writeFdV[numSlaves];
-    pid_t childPidV[numSlaves]
+    pid_t childPidV[numSlaves];
 
     // Creating slaves 
     for (int i = 0; i < numSlaves; i++) {
@@ -96,29 +82,32 @@ int main(int argc, char * argv[]) {
     
 
 
-    // unlink semaphore
-    if (sem_unlink(sem_name) == ERROR) {
+    // unlink semaphore -> why first unlink before close?
+    if (sem_unlink(SEM_NAME) == ERROR) {
         fprintf(stderr, "Error unlinking semaphore"); 
-        exit(ERROR); 
+        exit(1); 
     }
-
 
     // close everything 
 
+
     // close output file 
+    fclose(output);
 
-    // close/destroy semaphores
-
-    // unlinking shared memory 
+    // unlinking shared memory -> munmap is needed
+    if (munmap(shmAddr, SHM_DEF_SIZE) == ERROR){
+        fprintf(stderr, "Error unmapping shared memory\n");
+        exit(1);
+    }
     if (shm_unlink(shmName) == ERROR) {
         fprintf(stderr, "Error unlinking shared memory"); 
-        exit(ERROR); 
+        exit(1); 
     }
 
     // close semaphore
-    if (sem_close(sem_addr) == ERROR) {
-        fprintf(stderr, "Error closing semaphore")
-        exit(ERROR); 
+    if (sem_close(semaphore) == ERROR) {
+        fprintf(stderr, "Error closing semaphore");
+        exit(1); 
     }
 
     exit(0);
@@ -126,7 +115,6 @@ int main(int argc, char * argv[]) {
 
 // Returns pid's of child processes 
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
-    
     // Create file descriptors for the pipes
     int appToSlave[2]; 
     int slaveToApp[2];
@@ -185,23 +173,25 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
     }
 
     return 0;
-
 }
 
 // create shared memory
 /* testear luego */
-int create_shared_memory(char * shmName, off_t shmSize) {
-    shm_unlink(shmName); // si no existe, que devuelve? o si no es exitoso el unlinking, manejar error
+int create_shared_memory(char * shmName, off_t offset, void * address) {
+    if(shm_unlink(shmName)!= 0){ // si no existe, que devuelve? o si no es exitoso el unlinking, manejar error -> no hace nada si no existe 
+        fprintf(stderr,"Error unlinking preexisting shared memory");
+        return ERROR;
+    }
     int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR); // faltaron modos, ahi lo puse
     if(shmFd == ERROR) {
         fprintf(stderr, "Error creating shared memory");
         return ERROR; 
     }
-    if (ftruncate(shmFd, length) == ERROR) {
+    if (ftruncate(shmFd, offset) == ERROR) {
         fprintf(stderr, "Error truncating shared memory");
         return ERROR;
     }
-    void * address = mmap(NULL, shmSize, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd , 0);
+    address = mmap(NULL, offset, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd , 0);
     if(address == MAP_FAILED) {
         fprintf(stderr, "Error mapping shared memory");
         return ERROR;
@@ -222,8 +212,8 @@ fd_set create_fd_set(int * fdv, int dim) {
 }
 
 
-void wait_for_view() {
-    printf("%s", NAME_SHM);
+void wait_for_view(char * shmName) {
+    printf("%s", shmName);
     sleep(2); 
     printf("\n");
 }

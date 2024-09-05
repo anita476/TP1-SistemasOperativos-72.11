@@ -15,5 +15,5 @@
 
 
 #define SHM_NAME "shmApp"
-
 #define SHM_DEF_SIZE 0x40000
+#define SEM_NAME "semApp"

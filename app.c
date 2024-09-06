@@ -268,7 +268,7 @@ ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV){
     fd_set readFdSet = create_fd_set(readFdV, numSlaves);
     int howMany = 0;
 
-    if(select(100, &readFdSet, NULL, NULL, NULL)< 0){
+    if(select(MAX_FD, &readFdSet, NULL, NULL, NULL)< 0){
         return ERROR;
     }
     for(int i = 0; i < numSlaves; i++){

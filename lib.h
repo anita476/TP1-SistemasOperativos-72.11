@@ -20,3 +20,7 @@
 
 #define SLAVES 5 
 #define BUFFER_SIZE 4096
+
+
+// taken from pselect limitations
+#define MAX_FD 1024

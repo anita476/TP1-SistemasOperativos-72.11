@@ -126,13 +126,6 @@ int main(int argc, char * argv[]) {
     //wait for vista to process
     sem_wait(semaphore);
     
-    // unlink semaphore -> why first unlink before close?
-    if (sem_unlink(SEM_NAME) == ERROR) {
-        fprintf(stderr, "Error unlinking semaphore\n"); 
-        exit(1); 
-    }
-
-    // close everything 
 
 
     // close output file 
@@ -151,6 +144,12 @@ int main(int argc, char * argv[]) {
     // close semaphore
     if (sem_close(semaphore) == ERROR) {
         fprintf(stderr, "Error closing semaphore");
+        exit(1); 
+    }
+
+    // unlink semaphore -> why first unlink before close?
+    if (sem_unlink(SEM_NAME) == ERROR) {
+        fprintf(stderr, "Error unlinking semaphore\n"); 
         exit(1); 
     }
 

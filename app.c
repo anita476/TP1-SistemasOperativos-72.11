@@ -90,7 +90,7 @@ int main(int argc, char * argv[]) {
         int readyCount = wait_for_ready(readFdV,numSlaves, childrenReady);
         for(int i = 0; i< readyCount ; i++){
             int whichChild = childrenReady[i];
-            pid_t childPID = childPidV[whichChild];
+            pid_t childPID = childPidV[whichChild]; // we ' lll use it to pass to view :0
 
             int pipeFd = readFdV[whichChild];
 
@@ -200,7 +200,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
         
         char * const argv[] = {"./slave", NULL};
         
-        if(execv("./slave", argv)) {
+        if(execv("./bin/slave", argv)) {
             fprintf(stderr, "Error in execv");
             return ERROR;
         }
@@ -213,11 +213,9 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
             fprintf(stderr, "Error closing pipe ends");
             return ERROR; 
         }
-        printf(stdout,"hello\n");
         //return values:
         * readDescriptor = slaveToApp[0];
         * writeDescriptor = appToSlave[1];
-        fprintf(stdout,"Hello 2\n");
         return pid;
     }
 

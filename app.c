@@ -8,6 +8,7 @@
 #include <sys/mman.h>
 #include <semaphore.h>
 #include <string.h>
+#include <math.h>
 #include <sys/stat.h> // moverlo a lib.h, para las macros S_IRUSR y  S_
 
 ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV);
@@ -18,6 +19,7 @@ void wait_for_view(const char * shmName);
 fd_set create_fd_set(int * fdv, int dim);
 
 int main(int argc, char * argv[]) {
+    
     // Check if the amount of arguments is valid
     if(argc < 2) {
         printf("Usage: ./md5 path\n");
@@ -74,7 +76,7 @@ int main(int argc, char * argv[]) {
         int *writeP = writeFdV + i;
         int *readP = readFdV + i;
         childPidV[i] = make_child_process(readP, writeP);
-        fprintf(stderr, "write[i]: %d\n",writeFdV[i]);
+        fprintf(stderr, "write[%d]: %d\n",i, writeFdV[i]);
 
         // give child starting file
         ssize_t first = write(*writeP, argv[i + 1], strlen(argv[i + 1]));
@@ -281,5 +283,12 @@ ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV){
 
 
 int logic_for_num_slaves(int numFiles){
-    return (numFiles < SLAVES) ? numFiles : SLAVES;
+    int logic = floor( numFiles / 10 );
+    if(logic < 1){
+        return numFiles;
+    }
+    else{
+        return (SLAVES * ( logic ));
+    }
+    
 }

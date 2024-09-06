@@ -15,6 +15,10 @@ int main() {
     // where we'll store the
     char result[MAX_HASH];
 
+    // Read line by line -> so pselect doesnt hang :)
+    setlinebuf(stdout);
+
+
     // we read from "stdin" (file descriptor is a mistery)
     // dont remember why the -1 de PI 
     int n;
@@ -25,7 +29,6 @@ int main() {
 
         // here would go the file validation (is it a dir?),,, optional for later
 
-        // overwrite \n because md5sum doesnt accept it :c
         if(filePath[n-1] == '\n') {
             filePath[n-1] = 0;
         }

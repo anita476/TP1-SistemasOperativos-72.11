@@ -7,3 +7,5 @@
 slave
 app
 output.txt
+PVS-Studio.log
+report.tasks

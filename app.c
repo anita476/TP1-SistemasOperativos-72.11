@@ -56,7 +56,7 @@ int main(int argc, char * argv[]) {
     // Local variables for files 
     int numFiles = argc -1; // esto no se  -> its okey (argv[0] is ./app)
     int numSlaves = logic_for_num_slaves(numFiles); // todo create a logic for numSlaves e.g. para 100 files quiero 10 esclavos, cada uno que procese 10 files 
-
+    printf("%d\n", numFiles);
     // create shared memory 
     shmFd = create_shared_memory(shmName, SHM_DEF_SIZE, shmAddr);
     wait_for_view(shmName); // should we pass length of shm ? && it should wait when shm is already created creo
@@ -71,10 +71,13 @@ int main(int argc, char * argv[]) {
 
     // Creating slaves 
     for (int i = 0; i < numSlaves; i++) {
-        childPidV[i] = make_child_process(readFdV[i], writeFdV[i]);
+        int *writeP = writeFdV + i;
+        int *readP = readFdV + i;
+        childPidV[i] = make_child_process(readP, writeP);
+        fprintf(stderr, "write[i]: %d\n",writeFdV[i]);
 
         // give child starting file
-        ssize_t first = write(writeFdV[i], argv[i + 1], strlen(argv[i + 1]));
+        ssize_t first = write(*writeP, argv[i + 1], strlen(argv[i + 1]));
         if(first < 0){
             fprintf(stderr, "Error processing files\n");
             exit(1);
@@ -182,12 +185,12 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
     
     // Child process 
     if (pid == 0) {
+        fprintf(stderr, "CHILD %d\n",getpid());
         // Close child redundant file descriptors 
         if (close(appToSlave[WRITE_END]) || close(slaveToApp[READ_END])) {
             fprintf(stderr, "Error closing pipe ends");
             return ERROR; 
         }
-        
         // for pipe created "for app" (for reading input data)-> where slave reads, its "stdin" 
         // for pipe crearted "for slave" (for writing result data) -> where slave writes, its "stdout"
         if(dup2(appToSlave[READ_END], STDIN_FILENO) < 0 || dup2(slaveToApp[WRITE_END], STDOUT_FILENO) < 0) {
@@ -210,11 +213,11 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
             fprintf(stderr, "Error closing pipe ends");
             return ERROR; 
         }
-
+        printf(stdout,"hello\n");
         //return values:
         * readDescriptor = slaveToApp[0];
         * writeDescriptor = appToSlave[1];
-
+        fprintf(stdout,"Hello 2\n");
         return pid;
     }
 
@@ -264,11 +267,10 @@ void wait_for_view(const char * shmName) {
 
 
 ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV){
-       // all is well 
     fd_set readFdSet = create_fd_set(readFdV, numSlaves);
     int howMany = 0;
 
-    if(select(1024, &readFdSet, NULL, NULL, NULL)< 0){
+    if(select(100, &readFdSet, NULL, NULL, NULL)< 0){
         return ERROR;
     }
     for(int i = 0; i < numSlaves; i++){
@@ -281,5 +283,5 @@ ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV){
 
 
 int logic_for_num_slaves(int numFiles){
-    return SLAVES; // todo later
+    return (numFiles < SLAVES) ? numFiles : SLAVES;
 }

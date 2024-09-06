@@ -2,12 +2,12 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/select.h>
 #include <sys/mman.h>
 #include <semaphore.h>
-#include <strings.h>
+#include <string.h>
 #include <sys/stat.h> // moverlo a lib.h, para las macros S_IRUSR y  S_
 
 ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV);
@@ -21,7 +21,7 @@ int main(int argc, char * argv[]) {
     // Check if the amount of arguments is valid
     if(argc < 2) {
         printf("Usage: ./md5 path\n");
-        fprintf(stderr, "Error in number of arguments passed");
+        fprintf(stderr, "Error in number of arguments passed\n");
         exit(1); 
     }
 
@@ -59,7 +59,6 @@ int main(int argc, char * argv[]) {
 
     // create shared memory 
     shmFd = create_shared_memory(shmName, SHM_DEF_SIZE, shmAddr);
-
     wait_for_view(shmName); // should we pass length of shm ? && it should wait when shm is already created creo
     
     
@@ -226,10 +225,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
 // create shared memory
 /* testear luego */
 int create_shared_memory(char * shmName, off_t offset, const void * address) {
-    if(shm_unlink(shmName)!= 0){ // si no existe, que devuelve? o si no es exitoso el unlinking, manejar error -> no hace nada si no existe 
-        fprintf(stderr,"Error unlinking preexisting shared memory");
-        return ERROR;
-    }
+    shm_unlink(shmName); //devolverá -1 porque no tiene que existir, y eso es´ta ok
     int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR); // faltaron modos, ahi lo puse
     if(shmFd == ERROR) {
         fprintf(stderr, "Error creating shared memory");
@@ -263,7 +259,8 @@ fd_set create_fd_set(int * fdv, int dim) {
 void wait_for_view(const char * shmName) {
     printf("%s", shmName);
     sleep(2); 
-    printf("\n");
+    fflush(stdout);
+    
 }
 
 

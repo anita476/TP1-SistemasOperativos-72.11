@@ -15,17 +15,20 @@ int main() {
     // where we'll store the
     char result[MAX_HASH];
 
+    // Read line by line -> so pselect doesnt hang :)
+    setlinebuf(stdout);
+
+
     // we read from "stdin" (file descriptor is a mistery)
     // dont remember why the -1 de PI 
     int n;
     while((n = read(STDIN_FILENO, filePath, sizeof(filePath) -1))) {
         if(n < 0) {
-            fprintf(stdout, "An error ocurred with file path");
+            fprintf(stdout, "An error ocurred while reading the file path");
         }
 
         // here would go the file validation (is it a dir?),,, optional for later
 
-        // overwrite \n because md5sum doesnt accept it :c
         if(filePath[n-1] == '\n') {
             filePath[n-1] = 0;
         }
@@ -37,10 +40,10 @@ int main() {
         snprintf(command,sizeof(command),"md5sum \"%s\" ", filePath);
 
         FILE * md5sum = popen(command,"r");
-        if(md5sum == NULL) {
+        if (md5sum == NULL) {
             exit(1);
         }
-        if(fgets(result,MAX_HASH,md5sum) == NULL) {
+        if (fgets(result,MAX_HASH,md5sum) == NULL) {
             pclose(md5sum);
             exit(1);
         }

@@ -15,5 +15,12 @@
 
 
 #define SHM_NAME "shmApp"
-
 #define SHM_DEF_SIZE 0x40000
+#define SEM_NAME "semApp"
+
+#define SLAVES 5 
+#define BUFFER_SIZE 4096
+
+
+// taken from pselect limitations
+#define MAX_FD 1024

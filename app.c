@@ -10,7 +10,7 @@
 #include <sys/stat.h> // moverlo a lib.h, para las macros S_IRUSR y  S_
 
 int make_child_process();
-int create_shared_memory(char * shmName, off_t length, void * address);
+int create_shared_memory(char * shmName, off_t length, const void * address);
 void wait_for_view(char * shmName);
 fd_set createFdSet(int * fdv, int dim);
 
@@ -27,7 +27,7 @@ int main(int argc, char * argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0); 
 
     // create file for output 
-    char * outputFilename = "output.txt";
+    char * const outputFilename = "output.txt";
     FILE * output;
     if ((output = fopen(outputFilename, "w")) == NULL) {
         fprintf(stderr, "Error creating output file");
@@ -177,7 +177,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
 
 // create shared memory
 /* testear luego */
-int create_shared_memory(char * shmName, off_t offset, void * address) {
+int create_shared_memory(char * shmName, off_t offset, const void * address) {
     if(shm_unlink(shmName)!= 0){ // si no existe, que devuelve? o si no es exitoso el unlinking, manejar error -> no hace nada si no existe 
         fprintf(stderr,"Error unlinking preexisting shared memory");
         return ERROR;
@@ -212,7 +212,7 @@ fd_set create_fd_set(int * fdv, int dim) {
 }
 
 
-void wait_for_view(char * shmName) {
+void wait_for_view(const char * shmName) {
     printf("%s", shmName);
     sleep(2); 
     printf("\n");

@@ -48,7 +48,7 @@ int main() {
             exit(1);
         }
         else {
-            printf("%s\n",result);
+            printf("%s\n", result);
         }
         pclose(md5sum);        
     }

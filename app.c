@@ -2,12 +2,8 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-#include <fcntl.h>
 #include <errno.h>
 #include <sys/select.h>
-#include <sys/mman.h>
-#include <semaphore.h>
-#include <string.h>
 #include <math.h>
 #include <sys/stat.h> // moverlo a lib.h, para las macros S_IRUSR y  S_
 
@@ -46,7 +42,7 @@ int main(int argc, char * argv[]) {
     void * shmAddr = 0; 
 
     //unlink  sem just  in case (to avoid repetition)
-    sem_unlink(SEM_NAME);
+    // sem_unlink(SEM_NAME);
 
     sem_t * semaphore = sem_open(SEM_NAME, O_CREAT, 0660, 0); 
     if (semaphore == SEM_FAILED) {
@@ -57,9 +53,11 @@ int main(int argc, char * argv[]) {
 
     // Local variables for files 
     int numFiles = argc -1; // esto no se  -> its okey (argv[0] is ./app)
+    fprintf(stderr,"Number of files: %d\n",numFiles);
     int numSlaves = logic_for_num_slaves(numFiles); // todo create a logic for numSlaves e.g. para 100 files quiero 10 esclavos, cada uno que procese 10 files 
-    printf("%d\n", numFiles);
+    // printf("%d\n", numFiles);
     // create shared memory 
+    // FALTA!! check if cannot make shared memory
     shmFd = create_shared_memory(shmName, SHM_DEF_SIZE, shmAddr);
     wait_for_view(shmName); // should we pass length of shm ? && it should wait when shm is already created creo
     
@@ -116,11 +114,17 @@ int main(int argc, char * argv[]) {
             }
             //raise semaphore so view can read
             sem_post(semaphore);
-            // now we need to send new files
+            // now we need to send new files -> todo FIXXXX -> fails to send NEW files to pipe
             int pipeFd2 = writeFdV[whichChild];
+            fprintf(stderr, "PIPEFD2 %d\n", pipeFd2);
+            fprintf(stderr, "NUM Files: %d\n",numFiles);
             if(nextToProcess < numFiles){
+                fprintf(stderr, "Next file: %d\n",nextToProcess);
                  char *filename = argv[nextToProcess++];
-                if(write(pipeFd2, filename, strlen(filename)< 0)){
+                 fprintf(stderr, "filename: %s\n", filename);
+                 int n = write(pipeFd2, filename, strlen(filename));
+                fprintf(stderr, "Write num: %d",n);
+                if(n < 0){
                     fprintf(stderr, "Error assigning file to slave\n");
                     exit(1);
                 }
@@ -128,24 +132,22 @@ int main(int argc, char * argv[]) {
         }
         processed += readyCount;
     }
+
+    // check if file descriptor still refers to terminal? idk why lucas does it yet, he uses isatty
+
+    printf("IN APP: posting semaphore\n");
+    sem_post(semaphore);
+    printf("IN APP: came back from semaphore\n");
+
     //wait for vista to process
-    sem_wait(semaphore);
+    // ana said that its not necessary 
     
 
 
     // close output file 
     fclose(output);
 
-    // unlinking shared memory -> munmap is needed
-    if (munmap(shmAddr, SHM_DEF_SIZE) == ERROR){
-        fprintf(stderr, "Error unmapping shared memory\n");
-        exit(1);
-    }
-    if (shm_unlink(shmName) == ERROR) {
-        fprintf(stderr, "Error unlinking shared memory"); 
-        exit(1); 
-    }
-
+    
     // close semaphore
     if (sem_close(semaphore) == ERROR) {
         fprintf(stderr, "Error closing semaphore");
@@ -155,6 +157,16 @@ int main(int argc, char * argv[]) {
     // unlink semaphore -> why first unlink before close?
     if (sem_unlink(SEM_NAME) == ERROR) {
         fprintf(stderr, "Error unlinking semaphore\n"); 
+        exit(1); 
+    }
+
+    // unlinking shared memory -> munmap is needed
+    if (munmap(shmAddr, SHM_DEF_SIZE) == ERROR){
+        fprintf(stderr, "Error unmapping shared memory\n");
+        exit(1);
+    }
+    if (shm_unlink(shmName) == ERROR) {
+        fprintf(stderr, "Error unlinking shared memory"); 
         exit(1); 
     }
 
@@ -228,7 +240,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
 /* testear luego */
 int create_shared_memory(char * shmName, off_t offset, const void * address) {
     shm_unlink(shmName); //devolverá -1 porque no tiene que existir, y eso es´ta ok
-    int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR); // faltaron modos, ahi lo puse
+    int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if(shmFd == ERROR) {
         fprintf(stderr, "Error creating shared memory");
         return ERROR; 
@@ -245,8 +257,6 @@ int create_shared_memory(char * shmName, off_t offset, const void * address) {
     return shmFd;
 }
 
-
-
 fd_set create_fd_set(int * fdv, int dim) {
     fd_set toReturn;
     // To avoid "trash"
@@ -260,7 +270,7 @@ fd_set create_fd_set(int * fdv, int dim) {
 
 void wait_for_view(const char * shmName) {
     printf("%s", shmName);
-    sleep(2); 
+    sleep(2);
     fflush(stdout);
     
 }
@@ -284,10 +294,12 @@ ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV){
 
 int logic_for_num_slaves(int numFiles){
     int logic = floor( numFiles / 10 );
+    fprintf(stderr, "logic %d\n", logic);
     if(logic < 1){
         return numFiles;
     }
     else{
+        fprintf(stderr, "slaves: %d\n", SLAVES * logic);
         return (SLAVES * ( logic ));
     }
     

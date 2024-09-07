@@ -3,59 +3,120 @@
 
 // ./app files/* | ./vista
 
-terminal1> 
-// ./app files/* 
-terminal2>
-// ./vista 
+// terminal1> 
+// // ./app files/* 
+// terminal2>
+// // ./vista 
 
 #include "lib.h"
-#include <string.h>
-#include <semaphore.h>
 
 #define NAME_SIZE 10
 
 
 int main(int argc, char *argv[]) {
 
+    fprintf(stderr, "In view...\n");
     int shmFd; 
-    char shmName[NAME_SIZE];  
-
-    if (argc > 1) {
-        strncpy(shmName, argv[1], sizeof(shmName)-1);
+    char shmName[NAME_SIZE]; 
+    int n;
+    for (int i = 0; i < argc; i++) {
+        fprintf(stderr, "view %d>> %s\n", i, argv[i]);
     }
 
-    else {
-        if((n = read(STDIN_FILENO, shmName, sizeof(shmName) - 1)) < 0) {
-            
+    // caso error
+    if (argc == 2) {
+        fprintf(stderr, "Parameters missing...");
+        exit(ERROR);
+    } else if (argc == 1) 
+    // caso pipe
+    {
+        if((n = read(STDIN_FILENO, shmName, sizeof(shmName))) < 0) {
+            fprintf(stderr, "Error reading input");
+            exit(ERROR);
         }
+        shmName[n] = 0; // fixed this erro 
     }
+    else {
+        //caso por parámetro
+        strncpy(shmName, argv[1], sizeof(shmName)-1);
+    } 
+    // 0
+    // 1 = | ./vista 
+    // 2 = ./vista algo     
 
-  
-    if ((shmFd = shm_open(shmName, O_RDONLY, S_IRSUR)) == ERROR) {
+    // cambio por el momento O_RDONLY
+
+    if ((shmFd = shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR)) == ERROR) {
         fprintf(stderr, "Error opening / reading shared memory");
         exit(ERROR); 
     }
     
-    void * shmData; 
-    if ((shmData = mmap(NULL, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
+    char * shmData; 
+    if ((shmData = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
         fprintf(stderr, "Error mapping shared memory");
         exit(ERROR); 
     }
 
-    printf("FILE - MD5_HASH - CHILD_PID"); 
+    sem_t * semaphore = sem_open(SEM_NAME, O_RDONLY, 0);
+    if (semaphore == SEM_FAILED) {
+        fprintf(stderr, "Error opening semaphore in view");
+        exit(ERROR);
+    } 
 
-    // logic for semaphores 
-    // veo si sem_wait esta bloqueado (no hay semData nuevo)
-    // cuando esta listo (paso un arg para leer), copio el contenido a un buffer
+    // telling app that we are reading!! 
+    if (sem_wait(semaphore) == ERROR) {
+        fprintf(stderr, "Error in sem_wait in view");
+        exit(ERROR);
+    }
+ 
+    // no print buffering
+	setvbuf(stdout, NULL, _IONBF, 0);
+
+    // probamos ver que hay dentor de shmData
+    // printf("view!! %s", (char *)shmData);
+
+    printf("Calculating md5 hash...\n");
+    int done = 0; 
+    for (int i = 0; !done; i++) {
+        sem_wait(semaphore);
+
+        printf("\n File: %s | MD5: %s | PID: %d\n", )
+    }
+    
+    char buffer[BUFFER_SIZE];
+
+    // n = 0;
+    // // Toma un md5 y cierra el semáforo hasta que termina de procesarlo
+    // while(!(sem_wait(semaphore))) {
+    //     if (shmData[n] == 0) {
+    //         break; 
+    //     }
+    //     int len = 0;
+    //     while (shmData[n] != '\n') {
+    //         len++;
+    //     }
+
+    //     memcpy(buffer, shmData+n, ++len);
+    //     buffer[len] = 0;
+    //     n+=len;
+    //     printf("MD_5 HASH: %s\n", buffer);
+    // }
+
+    // printf("FILE - MD5_HASH - CHILD_PID"); 
 
     // termino de pasar todo, mando un sem_post a app para indicarle que ya termino 
 
+    if (sem_post(semaphore) == ERROR) {
+        fprintf(stderr, "Error in sem_post in view");
+        exit(ERROR);
+    }
 
     // closing shared memory 
-    if (munmap(mmapAddr, SHM_SIZE) == ERROR) {
+    if (munmap(shmData, SHM_DEF_SIZE) == ERROR) {
         fprintf(stderr, "Error unmapping shared memory");
         exit(ERROR); 
     }
+    
     if (close(shmFd) == ERROR) {
         fprintf(stderr, "Error closing shared memory");
         exit(ERROR); 

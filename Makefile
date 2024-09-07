@@ -4,7 +4,7 @@ ALL_CFLAGS = -Wall -fdiagnostics-color=always $(CFLAGS)
 
 OUT_DIR = bin
 
-all: pre-build app slave
+all: pre-build app slave view
 
 app: app.c
 	$(CC) $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@

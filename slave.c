@@ -21,29 +21,29 @@ int main() {
     // we read from "stdin" (file descriptor is a mistery)
     // dont remember why the -1 de PI 
     int n;
-    while((n = read(STDIN_FILENO, filePath, sizeof(filePath) -1))) {
-        if(n < 0) {
+    while ((n = read(STDIN_FILENO, filePath, sizeof(filePath) - 1))) {
+        if (n < 0) {
             fprintf(stdout, "An error ocurred while reading the file path");
         }
 
         // here would go the file validation (is it a dir?),,, optional for later
 
-        if(filePath[n-1] == '\n') {
-            filePath[n-1] = 0;
+        if (filePath[n - 1] == '\n') {
+            filePath[n - 1] = 0;
         }
         else {
             filePath[n] = 0;
         }
 
         //append the file path as part of the command
-        snprintf(command,sizeof(command),"md5sum \"%s\" ", filePath);
+        snprintf(command, sizeof(command), "md5sum \"%s\" ", filePath);
 
-        FILE * md5sum = popen(command,"r");
+        FILE * md5sum = popen(command, "r");
         if (md5sum == NULL) {
             exit(1);
         }
 
-        if (fgets(result,MAX_HASH,md5sum) == NULL) {
+        if (fgets(result, MAX_HASH, md5sum) == NULL) {
             pclose(md5sum);
             exit(1);
         }
@@ -51,7 +51,7 @@ int main() {
         else {
             printf("%s\n", result);
         }
-        
+
         pclose(md5sum);        
     }
     exit(0);

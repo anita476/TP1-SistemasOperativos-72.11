@@ -52,7 +52,6 @@ int main(int argc, char * argv[]) {
 
     // Local variables for files 
     int numFiles = argc - 1;
-    fprintf(stderr, "Number of files: %d\n", numFiles);
     int numSlaves = logic_for_num_slaves(numFiles);
     // printf("%d\n", numFiles);
     // create shared memory 
@@ -85,11 +84,13 @@ int main(int argc, char * argv[]) {
     int nextToProcess = numSlaves + 1;
     int processed = 0;
 
+    // There are still files to process
     while (processed < numFiles) {
         int childrenReady[numSlaves];
-        int readyCount = wait_for_ready(readFdV,numSlaves, childrenReady);
+        int readyCount = wait_for_ready(readFdV, numSlaves, childrenReady);
+        fprintf(stderr, "Processed: %d\n", processed);
 
-        for(int i = 0; i< readyCount; i++) {
+        for(int i = 0; i < readyCount; i++) {
             int whichChild = childrenReady[i];
             pid_t childPID = childPidV[whichChild]; // we ' lll use it to pass to view :0
             int pipeFd = readFdV[whichChild];
@@ -122,15 +123,15 @@ int main(int argc, char * argv[]) {
 
             // now we need to send new files -> todo FIXXXX -> fails to send NEW files to pipe
             int pipeFd2 = writeFdV[whichChild];
-            fprintf(stderr, "PIPEFD2 %d\n", pipeFd2);
-            fprintf(stderr, "NUM Files: %d\n", numFiles);
 
             if(nextToProcess < numFiles) {
+                fprintf(stderr, "--------------------------\n", n);
                 fprintf(stderr, "Next file: %d\n", nextToProcess);
                 char *filename = argv[nextToProcess++];
                 fprintf(stderr, "filename: %s\n", filename);
                 int n = write(pipeFd2, filename, strlen(filename));
-                fprintf(stderr, "Write num: %d", n);
+                fprintf(stderr, "Write num: %d\n", n);
+                fprintf(stderr, "--------------------------\n", n);
                 if(n < 0) {
                     fprintf(stderr, "Error assigning file to slave\n");
                     exit(1);
@@ -178,9 +179,6 @@ int main(int argc, char * argv[]) {
     exit(0);
 }
 
-
-
-
 // Returns pid's of child processes 
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
     // Create file descriptors for the pipes
@@ -204,8 +202,6 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
     
     // Child process 
     if (pid == 0) {
-        fprintf(stderr, "CHILD %d\n",getpid());
-
         // Close child redundant file descriptors 
         if (close(appToSlave[WRITE_END]) || close(slaveToApp[READ_END])) {
             fprintf(stderr, "Error closing pipe ends");
@@ -284,15 +280,25 @@ void wait_for_view(const char * shmName) {
 }
 
 ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV) {
+    fprintf(stderr, "entered wait\n");
     fd_set readFdSet = create_fd_set(readFdV, numSlaves);
     int howMany = 0;
+    int maxFd = -1;
 
-    if(select(MAX_FD, &readFdSet, NULL, NULL, NULL) < 0) {
+    // Finds the highest fd
+    for (int i = 0; i < numSlaves; i++) {
+        if (readFdV[i] > maxFd) {
+            maxFd = readFdV[i];
+        }
+    }
+
+    if (select(maxFd + 1, &readFdSet, NULL, NULL, NULL) < 0) {
         return ERROR;
     }
 
-    for(int i = 0; i < numSlaves; i++) {
-        if(FD_ISSET(readFdV[i], &readFdSet)) {
+    for (int i = 0; i < numSlaves; i++) {
+        // Checks if the file descriptor is part of the set
+        if (FD_ISSET(readFdV[i], &readFdSet)) {
             readyV[howMany++] = i;
         }
     }
@@ -302,12 +308,9 @@ ssize_t wait_for_ready(pid_t * readFdV, int numSlaves, int * readyV) {
 
 int logic_for_num_slaves(int numFiles) {
     int logic = floor(numFiles / 10);
-    fprintf(stderr, "logic %d\n", logic);
-    if(logic < 1) {
-        return numFiles;
-    }
-    else {
-        fprintf(stderr, "slaves: %d\n", SLAVES * logic);
-        return (SLAVES * (logic));
-    }
+    if (logic < 1) return numFiles;
+    else { 
+        fprintf(stderr, "Slaves num: %d\n", SLAVES * logic);
+        return (SLAVES * logic);
+    };
 }

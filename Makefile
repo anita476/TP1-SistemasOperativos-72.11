@@ -6,13 +6,16 @@ OUT_DIR = bin
 
 all: pre-build app slave view
 
-app: app.c
-	$(CC) $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
-
 pre-build:
 	@mkdir -p $(OUT_DIR)
 
+app: app.c
+	$(CC) $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
+
 slave: slave.c
+	$(CC) $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
+
+view: view.c
 	$(CC) $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
 clean:

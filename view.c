@@ -71,8 +71,7 @@ int main(int argc, char *argv[]) {
     int done = 0; 
     for (int i = 0; !done; i++) {
         sem_wait(semaphore);
-
-        printf("\n File: %s | MD5: %s | PID: %d\n", )
+        printf("\n File: %s | MD5: %s | PID: %d\n");
     }
     
     char buffer[BUFFER_SIZE];

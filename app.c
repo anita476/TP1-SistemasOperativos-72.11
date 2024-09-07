@@ -51,9 +51,9 @@ int main(int argc, char * argv[]) {
     }
 
     // Local variables for files 
-    int numFiles = argc -1;
+    int numFiles = argc - 1;
     fprintf(stderr, "Number of files: %d\n", numFiles);
-    int numSlaves = logic_for_num_slaves(numFiles); // todo create a logic for numSlaves e.g. para 100 files quiero 10 esclavos, cada uno que procese 10 files 
+    int numSlaves = logic_for_num_slaves(numFiles);
     // printf("%d\n", numFiles);
     // create shared memory 
     // FALTA!! check if cannot make shared memory
@@ -73,7 +73,6 @@ int main(int argc, char * argv[]) {
         int *readP = readFdV + i;
 
         childPidV[i] = make_child_process(readP, writeP);
-        fprintf(stderr, "write[%d]: %d\n", i, writeFdV[i]);
 
         // give child starting file
         ssize_t first = write(*writeP, argv[i + 1], strlen(argv[i + 1]));
@@ -280,7 +279,6 @@ fd_set create_fd_set(int * fdv, int dim) {
 }
 
 void wait_for_view(const char * shmName) {
-    printf("%s", shmName);
     sleep(2);
     fflush(stdout);
 }

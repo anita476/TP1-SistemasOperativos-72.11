@@ -18,7 +18,6 @@ int main() {
     // Read line by line -> so pselect doesnt hang :)
     setlinebuf(stdout);
 
-
     // we read from "stdin" (file descriptor is a mistery)
     // dont remember why the -1 de PI 
     int n;
@@ -43,13 +42,16 @@ int main() {
         if (md5sum == NULL) {
             exit(1);
         }
+
         if (fgets(result,MAX_HASH,md5sum) == NULL) {
             pclose(md5sum);
             exit(1);
         }
+
         else {
             printf("%s\n", result);
         }
+        
         pclose(md5sum);        
     }
     exit(0);

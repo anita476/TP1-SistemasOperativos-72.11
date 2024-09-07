@@ -1,24 +1,17 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
-// ./app files/* | ./vista
-
-// terminal1> 
-// // ./app files/* 
-// terminal2>
-// // ./vista 
-
 #include "lib.h"
 
 #define NAME_SIZE 10
 
-
 int main(int argc, char *argv[]) {
 
     fprintf(stderr, "In view...\n");
-    int shmFd; 
     char shmName[NAME_SIZE]; 
+    int shmFd;
     int n;
+
     for (int i = 0; i < argc; i++) {
         fprintf(stderr, "view %d>> %s\n", i, argv[i]);
     }
@@ -26,23 +19,22 @@ int main(int argc, char *argv[]) {
     // caso error
     if (argc == 2) {
         fprintf(stderr, "Parameters missing...");
-        exit(ERROR);
-    } else if (argc == 1) 
+        exit(ERROR);  
+    } 
+    
     // caso pipe
-    {
+    else if (argc == 1) {
         if((n = read(STDIN_FILENO, shmName, sizeof(shmName))) < 0) {
             fprintf(stderr, "Error reading input");
             exit(ERROR);
         }
         shmName[n] = 0; // fixed this erro 
     }
+
+    //caso por parámetro
     else {
-        //caso por parámetro
         strncpy(shmName, argv[1], sizeof(shmName)-1);
-    } 
-    // 0
-    // 1 = | ./vista 
-    // 2 = ./vista algo     
+    }
 
     // cambio por el momento O_RDONLY
 

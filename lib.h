@@ -1,12 +1,12 @@
-#include <stdio.h>
+#include <sys/types.h>
+#include <semaphore.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
-#include <semaphore.h>
+#include <stdio.h>
 #include <fcntl.h>
-#include <sys/mman.h>
-
 
 #define ERROR (-1) 
 
@@ -18,14 +18,12 @@
 // maximum of hash is 128 bits
 #define MAX_HASH 32
 
-
 #define SHM_NAME "shmApp"
 #define SHM_DEF_SIZE 0x40000
 #define SEM_NAME "semApp"
 
 #define SLAVES 5 
 #define BUFFER_SIZE 4096
-
 
 // taken from pselect limitations
 #define MAX_FD 1024

@@ -26,7 +26,7 @@ int main() {
             fprintf(stdout, "An error ocurred while reading the file path");
         }
 
-        // here would go the file validation (is it a dir?),,, optional for later
+        // here would go the file validation (is it a dir? can i read it ? well formed path?),,, optional for later
 
         if (filePath[n - 1] == '\n') {
             filePath[n - 1] = 0;

@@ -9,7 +9,7 @@
 
 #define OUTPUT_FILE "output.txt"
 
-typedef struct {
+typedef struct { // todo put in .h
     int readFd; 
     int writeFd; 
     pid_t pid; 
@@ -19,7 +19,7 @@ int create_shared_memory(char * shmName, off_t length, const void * address);
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
 ssize_t wait_for_ready(SlaveProcess * slaves, int numSlaves, int * readyV);
 // fd_set create_fd_set(int * fdv, int dim);
-void wait_for_view(const char * shmName);
+void wait_for_view();
 int logic_for_num_slaves(int numFiles);
 int send_file_to_slave(SlaveProcess *slave, const char *filename);
 
@@ -59,6 +59,8 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error creating shared memory");
         exit(ERROR);
     }
+    
+    fprintf(stderr, "shm file descriptor app: %d\n",shmFd);
 
     // Create semaphores
     sem_unlink(SEM_NAME);
@@ -67,26 +69,11 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
     
-    wait_for_view(SHM_NAME); // should we pass length of shm ? && it should wait when shm is already created creo
-
-    // // Vectors -- option 2: childPidV[numSlaves][2]
-    // int readFdV[numSlaves]; 
-    // int writeFdV[numSlaves];
-    // pid_t childPidV[numSlaves];
-
-    // Creating slaves 
-
-    // slaves = calloc(numSlaves, sizeof(SlaveProcess));
-    // if (slaves == NULL) {
-    //     fprintf(stderr, "Error allocating memory for slaves");
-    //     exit(ERROR);
-    // }
+    
+    wait_for_view(); 
 
     for (int i = 0; i < numSlaves; i++) {
-        // int *writeP = writeFdV + i;
-        // int *readP = readFdV + i;
 
-        // childPidV[i] = make_child_process(readP, writeP);
         slaves[i].pid = make_child_process(&slaves[i].readFd, &slaves[i].writeFd);
 
         // give child starting file
@@ -140,39 +127,19 @@ int main(int argc, char * argv[]) {
 
             processed++;
 
-            // now we need to send new files -> todo FIXXXX -> fails to send NEW files to pipe
-            // int pipeFd2 = writeFdV[whichSlave];
-
             if(nextToProcess < numFiles) {
-                // fprintf(stderr, "--------------------------\n", n);
-                // fprintf(stderr, "Next file: %d\n", nextToProcess);
-                // char *filename = argv[nextToProcess++];
-                // fprintf(stderr, "filename: %s\n", filename);
-                // int n = write(pipeFd2, filename, strlen(filename));
-                // fprintf(stderr, "Write num: %d\n", n);
-                // fprintf(stderr, "--------------------------\n", n);
-                // if(n < 0) {
-                //     fprintf(stderr, "Error assigning file to slave\n");
-                //     exit(1);
-                // }
                 if (send_file_to_slave(slave, argv[nextToProcess + 1]) < 0) {
                     fprintf(stderr, "Error sending file to slave %d", whichSlave);
                     exit(ERROR);
                 }
                 nextToProcess++;
             }
+
+            // here we should close the rest of the pipes!
         }
-        // processed += readyCount;
     }
 
     // check if file descriptor still refers to terminal? idk why lucas does it yet, he uses isatty
-
-    printf("IN APP: posting semaphore\n");
-    sem_post(semaphore);
-    printf("IN APP: came back from semaphore\n");
-
-    //wait for vista to process
-    // ana said that its not necessary 
     
     // close output file 
     fclose(output);
@@ -194,9 +161,12 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error unmapping shared memory\n");
         exit(1);
     }
+    else{
+        fprintf(stderr, "I unmapped shm\n");
+    }
 
-    if (shm_unlink(SHM_NAME) == ERROR) {
-        fprintf(stderr, "Error unlinking shared memory"); 
+    if (close(shmFd) == ERROR) { //if i unlink view cant access anymore (namespace is deleted)
+        fprintf(stderr, "Error closing shared memory"); 
         exit(1); 
     }
 
@@ -266,7 +236,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
 // create shared memory
 /* testear luego */
 int create_shared_memory(char * shmName, off_t offset, const void * address) {
-    shm_unlink(shmName); //devolverá -1 porque no tiene que existir, y eso es´ta ok
+    shm_unlink(shmName); //devolverá -1 porque no tiene que existir, y eso esta ok
     
     int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if(shmFd == ERROR) {
@@ -288,18 +258,10 @@ int create_shared_memory(char * shmName, off_t offset, const void * address) {
     return shmFd;
 }
 
-// fd_set create_fd_set(int * fdv, int dim) {
-//     fd_set toReturn;
-//     // To avoid "trash"
-//     FD_ZERO(&toReturn);
-//     for (int i = 0; i < dim; i++) {
-//         FD_SET(fdv[i], &toReturn);
-//     }
-//     return toReturn;
-// }
-
-void wait_for_view(const char * shmName) {
+void wait_for_view() {
     sleep(2);
+    printf("%s\n", SHM_NAME);
+    printf("%s\n",SEM_NAME);
     fflush(stdout);
 }
 
@@ -346,7 +308,7 @@ int logic_for_num_slaves(int numFiles) {
 }
 
 
-// aca no se si hacer que devuelva -1, o que haga un exit directamente desde esta funcion (como lo hicimos para las otras funcioens)
+// aca no se si hacer que devuelva -1, o que haga un exit directamente desde esta funcion (como lo hicimos para las otras funcioens) -> las funciones modulares no deberían hacer exit mejor
 int send_file_to_slave(SlaveProcess *slave, const char *filename) {
     ssize_t bytesWritten = write(slave->writeFd, filename, strlen(filename));
     if (bytesWritten < 0) {

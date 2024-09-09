@@ -9,3 +9,7 @@ app
 output.txt
 PVS-Studio.log
 report.tasks
+out.*
+valgrind.*
+massif.*
+callgrind.*

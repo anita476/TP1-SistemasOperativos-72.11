@@ -2,6 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
+#include <signal.h>
 
 #define NAME_SIZE 10
 
@@ -25,7 +26,7 @@ int main(int argc, char *argv[]) {
     // caso pipe
     //use scanf to tokenize
     else if (argc == 1) {
-        if((n = scanf("%[^\n]", shmName)) < 0) {
+        if((n = scanf("%s[^\n]", shmName)) < 0) {
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
@@ -58,13 +59,28 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Error mapping shared memory\n");
         exit(ERROR); 
     }
-
-    while(1){
-        sem_wait(semaphore);
-        shmData += printf("%s",shmData);
+    
+    //write header 
+    char * header = "FILE                 PID        MD5\n";
+    printf("%s", header);
+    int readBytes = 0;
+    while(sem_wait(semaphore) == 0){ //breaks bc after last print, im not sem_posting in loop of slave processes, 
+                                    // so process view remains locked -> we need an external sign to break
+                                    // we can turn shm into a tad
+                                    // for that we need to start using shm address instead of the file descriptor 
+                                    // another option is to set last value of shm fd to EOF so we know qwe reached EOF
+        fprintf(stderr,"im here\n");//use lseek(fd, offset, SEEK_SET) 
+        readBytes= printf("%s",shmData);
+        shmData+= readBytes;
         fflush(stdout);
+        if((shmData[readBytes+1]='-') && (shmData[readBytes+2]=='1') ){ // 
+            break;
+        }
+        // if ive reached EOF -> break
     }
     sem_close(semaphore);
+    munmap(shmData, SHM_DEF_SIZE);
+    close(shmFd);
     return 0;
 
 }

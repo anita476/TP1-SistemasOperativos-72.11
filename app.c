@@ -71,6 +71,7 @@ int main(int argc, char * argv[]) {
     
     
     wait_for_view(); 
+    
 
     for (int i = 0; i < numSlaves; i++) {
 
@@ -123,8 +124,13 @@ int main(int argc, char * argv[]) {
             }
 
             //raise semaphore so view can read
-            sem_post(semaphore);
-
+            int n = sem_post(semaphore);
+            if(n == -1){
+                fprintf(stderr,"No process was woken up\n");
+            }
+            else{
+                fprintf(stderr, "A process was woken up: n = %d\n",n);
+            }
             processed++;
 
             if(nextToProcess < numFiles) {
@@ -134,27 +140,28 @@ int main(int argc, char * argv[]) {
                 }
                 nextToProcess++;
             }
+            else if (processed == numFiles){
+                //im done processing, i should signal EOF
+                char * buf = "-1"; 
+                write(shmFd,buf,2);
 
-            // here we should close the rest of the pipes!
+
+            }
         }
     }
+    sem_post(semaphore);
+    // here we should close the rest of the pipes!
+    for(int i= 0; i < numSlaves; i++){
+        fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd,slaves[i].writeFd);
+        close(slaves[i].readFd);
+        close(slaves[i].writeFd);
 
+    }
+    
     // check if file descriptor still refers to terminal? idk why lucas does it yet, he uses isatty
     
     // close output file 
     fclose(output);
-
-    // close semaphore
-    if (sem_close(semaphore) == ERROR) {
-        fprintf(stderr, "Error closing semaphore");
-        exit(1); 
-    }
-
-    // unlink semaphore -> why first unlink before close?
-    if (sem_unlink(SEM_NAME) == ERROR) {
-        fprintf(stderr, "Error unlinking semaphore\n"); 
-        exit(1); 
-    }
 
     // unlinking shared memory -> munmap is needed
     if (munmap(shmAddr, SHM_DEF_SIZE) == ERROR ) {
@@ -169,6 +176,21 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error closing shared memory"); 
         exit(1); 
     }
+
+    // close semaphore
+    if (sem_close(semaphore) == ERROR) {
+        fprintf(stderr, "Error closing semaphore");
+        exit(1); 
+    }
+
+
+    // unlink semaphore -> why first unlink before close?
+    if (sem_unlink(SEM_NAME) == ERROR) {
+        fprintf(stderr, "Error unlinking semaphore\n"); 
+        exit(1); 
+    }
+
+    
 
     exit(0);
 }

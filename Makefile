@@ -21,5 +21,6 @@ view: view.c
 clean:
 	@rm -rf $(OUT_DIR)/* report.tasks $(OUT_DIR)
 	@rm -rf output.txt
+	@rm -rf out.txt
 
 .PHONY: all clean

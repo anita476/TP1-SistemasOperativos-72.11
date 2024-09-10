@@ -6,6 +6,7 @@
 #include <sys/select.h>
 #include <errno.h>
 #include <math.h>   
+#include <signal.h>
 
 #define OUTPUT_FILE "output.txt"
 
@@ -18,6 +19,7 @@ int logic_for_num_slaves(int numFiles);
 void wait_for_view();
 
 int main(int argc, char * argv[]) {
+    signal(SIGPIPE,SIG_IGN);
     
     // Check if the amount of arguments is valid
     if(argc < 2) {
@@ -159,9 +161,8 @@ int main(int argc, char * argv[]) {
             }
         }
     }
-
-    sem_post(semaphore);
     shmAddr->done = 1;
+    sem_post(semaphore);
     fprintf(stderr, "Content of shared memory:\n%s\n",shmAddr->buffer);
     // here we should close the rest of the pipes!
     for (int i= 0; i < numSlaves; i++) {
@@ -215,6 +216,8 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
         fprintf(stderr, "Error creating pipe");
         return ERROR; 
     }
+    fprintf(stderr,"APP to SLAVE pipe: readEnd: %d, writeEnd: %d\n",appToSlave[0],appToSlave[1]);
+    fprintf(stderr, "SLAVE to APP pipe: readEnd: %d, writeEnd: %d\n",slaveToApp[0],slaveToApp[1]);
     
     // Fork parent process
     pid_t pid = fork();
@@ -232,6 +235,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
             fprintf(stderr, "Error closing pipe ends");
             return ERROR; 
         }
+        fprintf(stderr,"I closed fd: %d and %d in child\n", appToSlave[WRITE_END],slaveToApp[READ_END]);
 
         // for pipe created "for app" (for reading input data)-> where slave reads, its "stdin" 
         // for pipe crearted "for slave" (for writing result data) -> where slave writes, its "stdout"
@@ -255,6 +259,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
             fprintf(stderr, "Error closing pipe ends");
             return ERROR; 
         }
+        fprintf(stderr,"I closed fd: %d and %d in parent\n", appToSlave[READ_END],slaveToApp[WRITE_END]);
         //return values:
         * readDescriptor = slaveToApp[0];
         * writeDescriptor = appToSlave[1];

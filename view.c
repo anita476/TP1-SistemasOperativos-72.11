@@ -18,11 +18,13 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < argc; i++) {
         fprintf(stderr, "view %d>> %s\n", i, argv[i]);
     }
+    
     // caso error
     if (argc == 2) {
         fprintf(stderr, "Parameters missing...\n");
         exit(ERROR);  
     } 
+
     // caso pipe
     //use scanf to tokenize
     else if (argc == 1) {
@@ -30,17 +32,20 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
+
         fprintf(stderr,"View know shm is: %s\n", shmName);
+
         if((n = scanf("%s",semName)) < 0){
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
+
         fprintf(stderr, "View knows sem is: %s\n",semName);
     }
 
     //caso por parámetro
     else {
-        strncpy(shmName, argv[1], sizeof(shmName)-1);
+        strncpy(shmName, argv[1], sizeof(shmName) - 1);
     }
 
     sem_t * semaphore = sem_open(semName, O_RDONLY, 0);
@@ -65,29 +70,37 @@ int main(int argc, char *argv[]) {
     printf("%s", header);
     char buffer[BUFFER_SIZE];
     int j = 0;
-    while(sem_wait(semaphore) == 0){ //breaks bc after last print, im not sem_posting in loop of slave processes, 
-                                    // so process view remains locked -> we need an external sign to break
-                                    // we can turn shm into a tad
-                                    // for that we need to start using shm address instead of the file descriptor 
-                                    // another option is to set last value of shm fd to EOF so we know qwe reached EOF
-        fprintf(stderr,"im here\n");//use lseek(fd, offset, SEEK_SET)
-        if(shmData->done == 1){
+
+    //breaks bc after last print, im not sem_posting in loop of slave processes, 
+    // so process view remains locked -> we need an external sign to break
+    // we can turn shm into a tad
+    // for that we need to start using shm address instead of the file descriptor 
+    // another option is to set last value of shm fd to EOF so we know qwe reached EOF
+    while (sem_wait(semaphore) == 0) { 
+
+        fprintf(stderr, "im here\n");   //use lseek(fd, offset, SEEK_SET)
+        
+        if (shmData->done == 1) {
             printf("Hello boo\n");
             break;
         }
+
         size_t len = 0;
-        while (shmData->buffer[j + len] != '\n')
-        {
+        while (shmData->buffer[j + len] != '\n') {
             len++;
         }
+
         memcpy(buffer, shmData->buffer + j, ++len);
         buffer[len] = 0;
-        j += len;
+        j += len;       
+        
         printf("%s", buffer);
     }
+
+    // Close and unmap everything 
     sem_close(semaphore);
     munmap(shmData, SHM_DEF_SIZE);
     close(shmFd);
-    return 0;
 
+    return 0;
 }

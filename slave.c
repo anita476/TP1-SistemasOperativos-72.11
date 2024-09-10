@@ -26,8 +26,8 @@ int main() {
     while ((n = read(STDIN_FILENO, filePath, sizeof(filePath) - 1))) {
         if (n < 0) {
             fprintf(stdout, "An error ocurred while reading the file path");
+            exit(1);
         }
-
         // here would go the file validation (is it a dir? can i read it ? well formed path?),,, optional for later
 
         if (filePath[n - 1] == '\n') {

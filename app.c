@@ -123,8 +123,13 @@ int main(int argc, char * argv[]) {
                 fprintf(stderr, "Error reading pipe output (from slave)\n");
                 exit(1);
             }
-
+            if(bytesRead < BUFFER_SIZE){
             buffer[bytesRead] = '\0';
+            }
+            else{
+                fprintf(stderr,"Buffer size exceeded\n");
+                exit(1);
+            }
 
             char result[BUFFER_SIZE + 4];
             //append every part of  result 

@@ -30,14 +30,14 @@ int main(int argc, char *argv[]) {
     // caso pipe
     //use scanf to tokenize
     else if (argc == 1) {
-        if((n = scanf("%s", shmName)) < 0) {
+        if((n = scanf("%s" ,shmName)) < 0) {
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
 
         fprintf(stderr,"View know shm is: %s\n", shmName);
 
-        if((n = scanf("%s",semName)) < 0){
+        if((n = scanf("%s", semName)) < 0){
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }

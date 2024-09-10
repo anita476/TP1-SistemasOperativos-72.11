@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
 
     fprintf(stderr, "In view...\n");
     char shmName[NAME_SIZE]; 
-    char semName[NAME_SIZE];
+    /*initializing to avoid PVS*/
+    char semName[NAME_SIZE]={0};
     int shmFd;
     int n;
 
@@ -30,14 +31,15 @@ int main(int argc, char *argv[]) {
     // caso pipe
     //use scanf to tokenize
     else if (argc == 1) {
-        if((n = scanf("%s" ,shmName)) < 0) {
+    /*I set  %9s to avoid the PVS warning */
+        if((n = scanf("%9s" ,shmName)) < 0 ){
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
 
         fprintf(stderr,"View know shm is: %s\n", shmName);
 
-        if((n = scanf("%s", semName)) < 0){
+        if((n = scanf("%9s", semName)) < 0){
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
@@ -49,7 +51,6 @@ int main(int argc, char *argv[]) {
     else {
         strncpy(shmName, argv[1], sizeof(shmName) - 1);
     }
-
     sem_t * semaphore = sem_open(semName, O_RDONLY, 0);
     if (semaphore == SEM_FAILED) {
         fprintf(stderr, "Error opening semaphore in view\n");

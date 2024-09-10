@@ -26,13 +26,8 @@ int main(int argc, char * argv[]) {
         exit(1); 
     }
 
-    // setvbuf(strem, buf, _IONBF, BUFSIZ); -- esto sigo sin entender para que sirve..
-    // _IONBF : unbuffered 
-        
-
     int numFiles = argc - 1;
     int numSlaves = logic_for_num_slaves(numFiles);
-    // printf("%d\n", numFiles);
 
     // Initialize resources
     int shmFd = -1;
@@ -156,12 +151,11 @@ int main(int argc, char * argv[]) {
                 }
                 nextToProcess++;
             }
-            else if (processed == numFiles){
+
+            else if (processed == numFiles) {
                 //im done processing, i should signal EOF
                 char * buf = "-1"; 
-                write(shmFd,buf,2);
-
-
+                write(shmFd,buf, 2);
             }
         }
     }
@@ -170,11 +164,10 @@ int main(int argc, char * argv[]) {
     shmAddr->done = 1;
     fprintf(stderr, "Content of shared memory:\n%s\n",shmAddr->buffer);
     // here we should close the rest of the pipes!
-    for(int i= 0; i < numSlaves; i++){
-        fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd,slaves[i].writeFd);
+    for (int i= 0; i < numSlaves; i++) {
+        fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
         close(slaves[i].readFd);
-        close(slaves[i].writeFd);
-
+        close(slaves[i].writeFd);   
     }
     
     // check if file descriptor still refers to terminal? idk why lucas does it yet, he uses isatty
@@ -187,7 +180,7 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error unmapping shared memory\n");
         exit(1);
     }
-    else{
+    else {
         fprintf(stderr, "I unmapped shm\n");
     }
 
@@ -202,14 +195,11 @@ int main(int argc, char * argv[]) {
         exit(1); 
     }
 
-
     // unlink semaphore -> why first unlink before close?
     if (sem_unlink(SEM_NAME) == ERROR) {
         fprintf(stderr, "Error unlinking semaphore\n"); 
         exit(1); 
     }
-
-    
 
     exit(0);
 }
@@ -346,7 +336,6 @@ int logic_for_num_slaves(int numFiles) {
     };
 }
 
-
 // aca no se si hacer que devuelva -1, o que haga un exit directamente desde esta funcion (como lo hicimos para las otras funcioens) -> las funciones modulares no deberían hacer exit mejor
 int send_file_to_slave(SlaveProcess *slave, const char *filename) {
     ssize_t bytesWritten = write(slave->writeFd, filename, strlen(filename));
@@ -358,6 +347,5 @@ int send_file_to_slave(SlaveProcess *slave, const char *filename) {
         fprintf(stderr, "Error writing to slave");
         return ERROR;
     }
-
     return 0;
 }

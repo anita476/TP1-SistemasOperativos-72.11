@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
         
         printf("%s", buffer);
         if(shmData->done == 1){
-            printf("Hello boo\n");
             break;
         }
     }

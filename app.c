@@ -5,17 +5,17 @@
 
 #include <sys/select.h>
 #include <errno.h>
-#include <math.h>
+#include <math.h>   
 
 #define OUTPUT_FILE "output.txt"
 
 int create_shared_memory(char * shmName, off_t length, const void * address);
-pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
 ssize_t wait_for_ready(SlaveProcess * slaves, int numSlaves, int * readyV);
-// fd_set create_fd_set(int * fdv, int dim);
-void wait_for_view();
-int logic_for_num_slaves(int numFiles);
+pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
 int send_file_to_slave(SlaveProcess *slave, const char *filename);
+// fd_set create_fd_set(int * fdv, int dim);
+int logic_for_num_slaves(int numFiles);
+void wait_for_view();
 
 int main(int argc, char * argv[]) {
     
@@ -28,7 +28,7 @@ int main(int argc, char * argv[]) {
 
     // setvbuf(strem, buf, _IONBF, BUFSIZ); -- esto sigo sin entender para que sirve..
     // _IONBF : unbuffered 
-    setvbuf(stdout, NULL, _IONBF, 0); 
+        
 
     int numFiles = argc - 1;
     int numSlaves = logic_for_num_slaves(numFiles);

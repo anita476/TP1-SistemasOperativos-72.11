@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 
-typedef struct { // todo put in .h
+typedef struct {
     int readFd; 
     int writeFd; 
     pid_t pid; 

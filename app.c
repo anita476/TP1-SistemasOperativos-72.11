@@ -129,7 +129,7 @@ int main(int argc, char * argv[]) {
             buffer[bytesRead] = '\0';
             
             // write to output file
-            if (fprintf(output, "%s", buffer) < 0) {
+            if (fprintf(output, "FileName\t\t\t%d\t%s", slaves[i].pid,buffer) < 0) {
                 fprintf(stderr, "Error writing result to output file");
                 exit(1);
             } 

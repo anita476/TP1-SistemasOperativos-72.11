@@ -8,6 +8,12 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+typedef struct { // todo put in .h
+    int readFd; 
+    int writeFd; 
+    pid_t pid; 
+} SlaveProcess;
+
 #define ERROR (-1) 
 
 #define READ_END 0 

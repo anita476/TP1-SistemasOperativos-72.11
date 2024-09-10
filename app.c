@@ -9,12 +9,6 @@
 
 #define OUTPUT_FILE "output.txt"
 
-typedef struct { // todo put in .h
-    int readFd; 
-    int writeFd; 
-    pid_t pid; 
-} SlaveProcess;
-
 int create_shared_memory(char * shmName, off_t length, const void * address);
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
 ssize_t wait_for_ready(SlaveProcess * slaves, int numSlaves, int * readyV);

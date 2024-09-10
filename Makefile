@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2
-ALL_CFLAGS = -Wall -fdiagnostics-color=always $(CFLAGS)
+ALL_CFLAGS = -Wall -fdiagnostics-color=always -fsanitize=address -g $(CFLAGS)
 
 OUT_DIR = bin
 

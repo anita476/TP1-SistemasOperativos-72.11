@@ -9,7 +9,7 @@
 
 #define OUTPUT_FILE "output.txt"
 
-int create_shared_memory(char * shmName, off_t length, const void * address);
+//int create_shared_memory(char * shmName, off_t length, SharedMemoryStruct * address);
 ssize_t wait_for_ready(SlaveProcess * slaves, int numSlaves, int * readyV);
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
 int send_file_to_slave(SlaveProcess *slave, const char *filename);
@@ -36,7 +36,7 @@ int main(int argc, char * argv[]) {
 
     // Initialize resources
     int shmFd = -1;
-    void * shmAddr = NULL;
+    SharedMemoryStruct * shmAddr = NULL;
     sem_t * semaphore = SEM_FAILED;
     FILE * output = NULL;
     SlaveProcess slaves[numSlaves];
@@ -48,11 +48,32 @@ int main(int argc, char * argv[]) {
     }
 
     // Create shared memory
-    shmFd = create_shared_memory(SHM_NAME, SHM_DEF_SIZE, shmAddr);
+/*     shmFd = create_shared_memory(SHM_NAME, SHM_DEF_SIZE, shmAddr);
+    
     if (shmFd == ERROR) {
         fprintf(stderr, "Error creating shared memory");
         exit(ERROR);
+    } */
+    shm_unlink(SHM_NAME); //devolverá -1 porque no tiene que existir, y eso esta ok
+    
+    shmFd = shm_open(SHM_NAME, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    if(shmFd == ERROR) {
+        fprintf(stderr, "Error creating shared memory");
+        exit(1);
     }
+
+    if (ftruncate(shmFd, SHM_DEF_SIZE) == ERROR) {
+        fprintf(stderr, "Error truncating shared memory");
+        exit(1);
+    }
+
+    shmAddr = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd , 0);
+    if(shmAddr == MAP_FAILED) {
+        fprintf(stderr, "Error mapping shared memory");
+        exit(1);
+    }
+    shmAddr->done = 0;
+    fprintf(stderr, "DONE? %d", shmAddr->done);
     
     fprintf(stderr, "shm file descriptor app: %d\n",shmFd);
 
@@ -80,6 +101,7 @@ int main(int argc, char * argv[]) {
 
     int nextToProcess = numSlaves;
     int processed = 0;
+    int bytesWritten = 0;
 
     // considerar: no entrar al loop si numSlaves == numFiles
     // There are still files to process
@@ -112,10 +134,8 @@ int main(int argc, char * argv[]) {
             } 
 
             // write to shared mem
-            if(write(shmFd, buffer, bytesRead) < 0) {
-                fprintf(stderr, "Error writing to shared memory\n");
-                exit(1);
-            }
+           //bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "%s", buffer);
+           bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "%s",buffer);
 
             //raise semaphore so view can read
             int n = sem_post(semaphore);
@@ -143,7 +163,11 @@ int main(int argc, char * argv[]) {
             }
         }
     }
+
     sem_post(semaphore);
+    shmAddr->done = 1;
+    fprintf(stderr,"%s\n",shmAddr->buffer);
+    fprintf(stderr, "We are done:%d\n",shmAddr->done);
     // here we should close the rest of the pipes!
     for(int i= 0; i < numSlaves; i++){
         fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd,slaves[i].writeFd);
@@ -251,7 +275,7 @@ pid_t make_child_process(int * readDescriptor, int * writeDescriptor) {
 
 // create shared memory
 /* testear luego */
-int create_shared_memory(char * shmName, off_t offset, const void * address) {
+/* int create_shared_memory(char * shmName, off_t offset, SharedMemoryStruct * address) {
     shm_unlink(shmName); //devolverá -1 porque no tiene que existir, y eso esta ok
     
     int shmFd = shm_open(shmName, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
@@ -270,9 +294,9 @@ int create_shared_memory(char * shmName, off_t offset, const void * address) {
         fprintf(stderr, "Error mapping shared memory");
         return ERROR;
     }
-    
+    address->done = 0;
     return shmFd;
-}
+} */
 
 void wait_for_view() {
     sleep(2);

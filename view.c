@@ -26,12 +26,12 @@ int main(int argc, char *argv[]) {
     // caso pipe
     //use scanf to tokenize
     else if (argc == 1) {
-        if((n = scanf("%s[^\n]", shmName)) < 0) {
+        if((n = scanf("%s", shmName)) < 0) {
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
         fprintf(stderr,"View know shm is: %s\n", shmName);
-        if((n = scanf("%s[^\n]",semName)) < 0){
+        if((n = scanf("%s",semName)) < 0){
             fprintf(stderr, "Error reading input\n");
             exit(ERROR);
         }
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
         exit(ERROR); 
     }
     
-    char * shmData; 
+    SharedMemoryStruct * shmData; 
     if ((shmData = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
         fprintf(stderr, "Error mapping shared memory\n");
         exit(ERROR); 
@@ -63,20 +63,28 @@ int main(int argc, char *argv[]) {
     //write header 
     char * header = "FILE                 PID        MD5\n";
     printf("%s", header);
-    int readBytes = 0;
+    char buffer[BUFFER_SIZE];
+    int j = 0;
     while(sem_wait(semaphore) == 0){ //breaks bc after last print, im not sem_posting in loop of slave processes, 
                                     // so process view remains locked -> we need an external sign to break
                                     // we can turn shm into a tad
                                     // for that we need to start using shm address instead of the file descriptor 
                                     // another option is to set last value of shm fd to EOF so we know qwe reached EOF
-        fprintf(stderr,"im here\n");//use lseek(fd, offset, SEEK_SET) 
-        readBytes= printf("%s",shmData);
-        shmData+= readBytes;
-        fflush(stdout);
-        if((shmData[readBytes+1]='-') && (shmData[readBytes+2]=='1') ){ // 
+        fprintf(stderr,"im here\n");//use lseek(fd, offset, SEEK_SET)
+        if(shmData->done == 1){
+            printf("Hello boo\n");
             break;
         }
-        // if ive reached EOF -> break
+        size_t len = 0;
+        while (shmData->buffer[j + len] != '\n')
+        {
+            len++;
+        }
+
+        memcpy(buffer, shmData->buffer + j, ++len);
+        buffer[len] = 0;
+        j += len;
+        printf("%s", buffer);
     }
     sem_close(semaphore);
     munmap(shmData, SHM_DEF_SIZE);

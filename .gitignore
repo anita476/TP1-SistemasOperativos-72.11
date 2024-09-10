@@ -11,5 +11,6 @@ PVS-Studio.log
 report.tasks
 out.*
 valgrind.*
+valgrind-*
 massif.*
 callgrind.*

@@ -33,3 +33,9 @@ typedef struct {
 
 // taken from pselect limitations
 #define MAX_FD 1024
+
+#define BUFFER ( SHM_DEF_SIZE- sizeof(int) )
+typedef struct{
+    int done;
+    char buffer[BUFFER]; /* to make sure we are defining th page structure correctly */
+} SharedMemoryStruct;

@@ -114,6 +114,7 @@ int main(int argc, char * argv[]) {
             int whichSlave = readySlaves[i];
             // pid_t childPID = childPidV[whichSlave]; // we ' lll use it to pass to view :0
             // int pipeFd = readFdV[whichSlave];
+
             SlaveProcess *slave = &slaves[whichSlave];
 
             // use what is on pipe to read result from slave
@@ -134,8 +135,7 @@ int main(int argc, char * argv[]) {
             } 
 
             // write to shared mem
-           //bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "%s", buffer);
-           bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "%s",buffer);
+           bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "FileName\t\t\t %d\t %s", slaves[i].pid,buffer);
 
             //raise semaphore so view can read
             int n = sem_post(semaphore);
@@ -306,9 +306,7 @@ void wait_for_view() {
 }
 
 ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int * readySlaves) {
-    // fprintf(stderr, "entered wait\n");
     fd_set readFdSet;
-    //  = create_fd_set(readFdV, numSlaves);
     int readyCount = 0;
     int maxFd = -1;
 

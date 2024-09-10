@@ -80,7 +80,6 @@ int main(int argc, char *argv[]) {
         {
             len++;
         }
-
         memcpy(buffer, shmData->buffer + j, ++len);
         buffer[len] = 0;
         j += len;

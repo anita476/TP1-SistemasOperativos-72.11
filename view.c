@@ -61,20 +61,14 @@ int main(int argc, char *argv[]) {
     }
     
     //write header 
-    char * header = "FILE                 PID        MD5\n";
-    printf("%s", header);
+    printf(HEADER);
+    fflush(stdout);
+
     char buffer[BUFFER_SIZE];
     int j = 0;
-    while(sem_wait(semaphore) == 0){ //breaks bc after last print, im not sem_posting in loop of slave processes, 
-                                    // so process view remains locked -> we need an external sign to break
-                                    // we can turn shm into a tad
-                                    // for that we need to start using shm address instead of the file descriptor 
-                                    // another option is to set last value of shm fd to EOF so we know qwe reached EOF
-        fprintf(stderr,"im here\n");//use lseek(fd, offset, SEEK_SET)
-        if(shmData->done == 1){
-            printf("Hello boo\n");
-            break;
-        }
+    while(sem_wait(semaphore) == 0){ 
+        fprintf(stderr,"im here\n");
+
         size_t len = 0;
         while (shmData->buffer[j + len] != '\n')
         {
@@ -84,6 +78,10 @@ int main(int argc, char *argv[]) {
         buffer[len] = 0;
         j += len;
         printf("%s", buffer);
+        if(shmData->done == 1){
+            printf("Hello boo\n");
+            break;
+        }
     }
     sem_close(semaphore);
     munmap(shmData, SHM_DEF_SIZE);

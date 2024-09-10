@@ -46,6 +46,7 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error creating output file");
         exit(1); 
     }
+    fprintf(output,HEADER);
 
     // Create shared memory
 /*     shmFd = create_shared_memory(SHM_NAME, SHM_DEF_SIZE, shmAddr);
@@ -73,9 +74,7 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
     shmAddr->done = 0;
-    fprintf(stderr, "DONE? %d", shmAddr->done);
     
-    fprintf(stderr, "shm file descriptor app: %d\n",shmFd);
 
     // Create semaphores
     sem_unlink(SEM_NAME);
@@ -127,15 +126,18 @@ int main(int argc, char * argv[]) {
             }
 
             buffer[bytesRead] = '\0';
-            
+
+            char result[BUFFER_SIZE + 4];
+            //append every part of  result 
+            snprintf(result, sizeof(result), "%s",buffer);
             // write to output file
-            if (fprintf(output, "FileName\t\t\t%d\t%s", slaves[i].pid,buffer) < 0) {
+            if (fprintf(output, "%s", result) < 0) {
                 fprintf(stderr, "Error writing result to output file");
                 exit(1);
             } 
 
             // write to shared mem
-           bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "FileName\t\t\t %d\t %s", slaves[i].pid,buffer);
+           bytesWritten += snprintf(shmAddr->buffer + bytesWritten,  BUFFER - bytesWritten, "%s", result);
 
             //raise semaphore so view can read
             int n = sem_post(semaphore);
@@ -166,8 +168,7 @@ int main(int argc, char * argv[]) {
 
     sem_post(semaphore);
     shmAddr->done = 1;
-    fprintf(stderr,"%s\n",shmAddr->buffer);
-    fprintf(stderr, "We are done:%d\n",shmAddr->done);
+    fprintf(stderr, "Content of shared memory:\n%s\n",shmAddr->buffer);
     // here we should close the rest of the pipes!
     for(int i= 0; i < numSlaves; i++){
         fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd,slaves[i].writeFd);

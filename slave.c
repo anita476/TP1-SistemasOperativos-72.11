@@ -49,7 +49,7 @@ int main() {
         }
 
         else {
-            printf("%s\n", result);
+            printf("%d\t%s\t\t\t%s\n", getpid(), filePath, result);
         }
 
         pclose(md5sum);        

@@ -39,3 +39,6 @@ typedef struct{
     int done;
     char buffer[BUFFER]; /* to make sure we are defining th page structure correctly */
 } SharedMemoryStruct;
+
+
+#define HEADER "PID\t\t\tFILE\t\t\t\tHASH\n"

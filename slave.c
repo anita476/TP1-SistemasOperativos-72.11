@@ -11,11 +11,11 @@
 
 int main() {
     // md5 command
-    char command[sizeof("md5sum ") + 2 /*for quotation marks*/ + MAX_FILE_PATH];
+    char command[sizeof("md5sum ") + 2 /*for quotation marks*/ + MAX_FILEPATH_LENGTH];
     // our file path to append
-    char filePath[MAX_FILE_PATH];
+    char filePath[MAX_FILEPATH_LENGTH];
     // where we'll store the
-    char result[MAX_HASH];
+    char result[MAX_MD5_LENGTH];
 
     // Read line by line -> so pselect doesnt hang :)
     setlinebuf(stdout);
@@ -45,7 +45,7 @@ int main() {
             exit(1);
         }
 
-        if (fgets(result, MAX_HASH, md5sum) == NULL) {
+        if (fgets(result, MAX_MD5_LENGTH, md5sum) == NULL) {
             pclose(md5sum);
             exit(1);
         }

@@ -17,9 +17,6 @@ int main(int argc, char *argv[]) {
     /*initializing to avoid PVS*/
     char semName[NAME_SIZE]={0};
     // char semDone[NAME_SIZE]={0};
-    int shmFd;
-    sem_t * semaphore; 
-    SharedMemoryStruct * shmData = NULL; 
 
 
     int n; // FixMe: needs a more descriptive name
@@ -57,52 +54,49 @@ int main(int argc, char *argv[]) {
         ERROR_EXIT("Parameters missing...\n");
     }
     // sem_t * done_semaphore = sem_open(semDone, O_RDONLY, 0); || done_semaphore == SEM_FAILED
-    if ((semaphore = sem_open(semName, 0)) == SEM_FAILED ) {
-        ERROR_EXIT("Error opening semaphore in view\n");
-    } 
+    
 
     fprintf(stderr, "Attempting to open shared memory: %s\n", shmName);
 
-    if ((shmFd = shm_open(shmName, O_RDONLY, S_IRUSR | S_IWUSR)) == ERROR) {
+    SharedMemoryStruct *shmData = malloc(sizeof(SharedMemoryStruct));
+
+    // FixMe: consider passing in the path in the function instead of using a constant
+
+
+    if ((shmData->fd = shm_open(shmName, O_RDONLY, S_IRUSR | S_IWUSR)) == ERROR) {
         ERROR_EXIT("Error opening / reading shared memory\n");
     }
-    
-    struct stat shmStat; 
-    if (fstat(shmFd, &shmStat) == ERROR) {
-        ERROR_EXIT("Error getting shared memory size");
-    }
 
-    if ((shmData = mmap(NULL, shmStat.st_size, PROT_READ, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
+    if ((shmData->shmAddr = mmap(NULL, shmData->bufferSize, PROT_READ, MAP_SHARED, shmData->fd, 0)) == MAP_FAILED) {
         ERROR_EXIT("Error mapping shared memory\n");
     }
 
-    fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData);
+    fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData->shmAddr);
 
-    
+    if ((shmData->sem = sem_open(semName, 0)) == SEM_FAILED ) {
+        ERROR_EXIT("Error opening shmData->sem in view\n");
+    } 
     //write header 
     printf(HEADER); // FixMe: writing header twice?? why is it also in app.c 
     fflush(stdout);
 
-    char buffer[BUFFER_SIZE];
+    char buffer[MAX_RES_LENGTH];
     size_t readIdx = 0;
-    int sem_return = 0;
+    // int sem_return = 0;
     while(1){ 
-        if ((sem_return = sem_wait(semaphore)) < 0) {
-            fprintf(stderr, "sem_wait failed");
-        }
+        sem_wait(shmData->sem);
+
         fprintf(stderr,"im here\n");
 
         // FIxMe: consider using atomic 
-        size_t currentSize = BUFFER_SIZE;
-
-        while (readIdx < currentSize) {
+        while (readIdx < MAX_RES_LENGTH) {
             size_t len = 0;
-            while (readIdx + len < currentSize && shmData->buffer[readIdx + len] != '\n') {
+            while (readIdx + len < MAX_RES_LENGTH && shmData->shmAddr[readIdx + len] != '\n') {
                 len++;
             }
 
-            if (readIdx + len < currentSize) {
-                memcpy(buffer, &shmData->buffer[readIdx], len);
+            if (readIdx + len < MAX_RES_LENGTH) {
+                memcpy(buffer, &shmData->shmAddr[readIdx], len);
                 buffer[len] = '\0';
                 printf("view>> %s\n", buffer);
                 readIdx += len + 1; // skip newline 
@@ -111,13 +105,13 @@ int main(int argc, char *argv[]) {
             }    
         }    
         
-        if(atomic_load(&shmData->done) == 1 && readIdx >= currentSize){
+        if(atomic_load(&shmData->done) == 1){
             break;
         }
     }
-    sem_close(semaphore);
-    munmap(shmData, shmStat.st_size);
-    close(shmFd);
+    sem_close(shmData->sem);
+    munmap(shmData, shmData->bufferSize);
+    close(shmData->fd);
 
     return 0;
 }

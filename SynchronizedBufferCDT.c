@@ -6,13 +6,14 @@ struct SynchronizedSharedBufferCDT {
     sem_t * fullBufferSemaphore; 
     size_t bufferSize; 
     int sharedMemoryFd; 
-    char * sharedMemoryPath; // idk what this is for 
+    char * sharedMemoryPath; 
     char * mutexSemaphorePath; 
     char * fullBufferSemaphorePath;
 };
 
 void handleError(char * errorMsg) { // please implement this function or make it as a define macro
-    // notify stderr and exit
+    perror(errorMsg); 
+    exit(EXIT_FAILURE);
 }
 
 SynchronizedSharedBufferADT createSynchronizedSharedBuffer(const restrict char * id, size_t bufferSize) {
@@ -113,36 +114,5 @@ ssize_t readSynchronizedSharedBuffer(SynchronizedSharedBufferADT sharedBuffer, v
 }
 
 
-/// app.c
-
-inline char * generateSharedBufferIdentifier(); 
-inline size_t getDerivedNUmberOfWorkers(size_t filesQuantity);
-void createCommunicateWorkers(size_t numberOfWorksers, pid_t workersPids[], int appToWorkerPipes[][2], int workerToAppPipes[][2]...);
-void distributeFileAndWriteResults(size_t numberOfFiles, const char * files[], size_t numberOfWorksers, int appToWorkerPipes....);
-void waitWorkers(pid_t workersPids[]);
-
-int main(int argc, char const *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "How to use: %s <file1> <file2> ... \n", argv[0]);
-        return 1;
-    }
-
-    SynchronizedSharedBufferADT sharedBuffer = createSynchronizedSharedBuffer(generateSharedBufferIdentifier());
-    FILE * outputFile = fopen("./output.txt", "w"); // FIxMe: handle error
-    size_t numberOfFiles = argc - 1; 
-    size_t numberOfWorksers = getDerivedNUmberOfWorkers(numberOfFiles);
-    pid_t workersPids[numberOfWorksers];
-    int appToWorkerPipes[numberOfWorksers][2]; 
-    int workerToAppPipes[numberOfWorksers][2];
-
-    sleep(2); 
-
-    createAndCommunicateWorkers(numberOfWorksers, workersPids, appToWorkerPipes, workerToAppPipes);
-
-    distributeFileAndWriteResults(numberOfFiles, argv, numberOfWorksers, appToWorkerPipes, workerToAppPipes, sharedBuffer);
-
-    waitWorkers(workersPids);
-    destroySynchronizedSharedBuffer(sharedBuffer);
-    return 0; 
 
 }

@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
     char shmName[NAME_SIZE]; 
     /*initializing to avoid PVS*/
     char semName[NAME_SIZE]={0};
+    // char semDone[NAME_SIZE]={0};
     int shmFd;
     int n;
 
@@ -52,21 +53,27 @@ int main(int argc, char *argv[]) {
         strncpy(shmName, argv[1], sizeof(shmName) - 1);
     }
     sem_t * semaphore = sem_open(semName, O_RDONLY, 0);
-    if (semaphore == SEM_FAILED) {
+    // sem_t * done_semaphore = sem_open(semDone, O_RDONLY, 0); || done_semaphore == SEM_FAILED
+    if (semaphore == SEM_FAILED ) {
         fprintf(stderr, "Error opening semaphore in view\n");
         exit(ERROR);
     } 
 
-    if ((shmFd = shm_open(SHM_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)) == ERROR) {
+    fprintf(stderr, "Attempting to open shared memory: %s\n", shmName);
+
+    if ((shmFd = shm_open(SHM_NAME, O_RDONLY, S_IRUSR | S_IWUSR)) == ERROR) {
         fprintf(stderr, "Error opening / reading shared memory\n");
         exit(ERROR); 
     }
     
     SharedMemoryStruct * shmData; 
-    if ((shmData = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
+    if ((shmData = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shmFd, 0)) == MAP_FAILED) {
         fprintf(stderr, "Error mapping shared memory\n");
         exit(ERROR); 
     }
+
+        fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData);
+
     
     //write header 
     printf(HEADER);
@@ -74,7 +81,11 @@ int main(int argc, char *argv[]) {
 
     char buffer[BUFFER_SIZE];
     int j = 0;
-    while(sem_wait(semaphore) == 0){ 
+    int sem_return = 0;
+    while(1){ 
+        if ((sem_return = sem_wait(semaphore)) != 0) {
+            fprintf(stderr, "sem_wait failed");
+        }
         fprintf(stderr,"im here\n");
 
         size_t len = 0;
@@ -86,11 +97,18 @@ int main(int argc, char *argv[]) {
         buffer[len] = 0;
         j += len;       
         
-        printf("%s", buffer);
-        if(shmData->done == 1){
+        printf("view>> %s\n", buffer);
+        if(atomic_load(&shmData->done) == 1){
             break;
         }
+        // if (sem_wait(done_semaphore) == 0) {
+        //     fprintf(stderr, "Processing completed in view:)\n");
+        // }
     }
+
+    // if (sem_return == -1) {
+    //     fprintf(stderr, "sem_wait failed");
+    // }
 
     // Close and unmap everything 
     sem_close(semaphore);

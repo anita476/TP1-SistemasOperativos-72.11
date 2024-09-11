@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+#include <stdatomic.h>
+
 typedef struct {
     int readFd; 
     int writeFd; 
@@ -27,6 +29,7 @@ typedef struct {
 #define SHM_NAME "shmApp"
 #define SHM_DEF_SIZE 0x40000
 #define SEM_NAME "semApp"
+#define SEM_DONE_NAME "semDone"
 
 #define SLAVES 5 
 #define BUFFER_SIZE 10000
@@ -36,7 +39,7 @@ typedef struct {
 
 #define BUFFER ( SHM_DEF_SIZE- sizeof(int) )
 typedef struct{
-    int done;
+    atomic_int done;
     char buffer[BUFFER]; /* to make sure we are defining th page structure correctly */
 } SharedMemoryStruct;
 

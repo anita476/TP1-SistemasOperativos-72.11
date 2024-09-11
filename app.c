@@ -12,6 +12,11 @@
 
 #define OUTPUT_FILE "output.txt"
 
+// #define ERROR_EXIT(msg) do {
+//     perror(msg);
+//     exit(EXIT_FAILURE); 
+// }
+
 //int create_shared_memory(char * shmName, off_t length, SharedMemoryStruct * address);
 ssize_t wait_for_ready(SlaveProcess * slaves, int numSlaves, int * readyV);
 pid_t make_child_process(int * readDescriptor, int * writeDescriptor);
@@ -25,7 +30,7 @@ int main(int argc, char * argv[]) {
     
     // Check if the amount of arguments is valid
     if(argc < 2) {
-        printf("Usage: ./md5 path\n");
+        printf("Usage: ./app <files>\n");
         fprintf(stderr, "Error in number of arguments passed\n");
         exit(1); 
     }
@@ -35,8 +40,11 @@ int main(int argc, char * argv[]) {
 
     // Initialize resources
     int shmFd = -1;
-    SharedMemoryStruct * shmAddr = NULL;
+    SharedMemoryStruct * shmAddr = NULL; // not too sure about initializing with null tbh
+
+
     sem_t * semaphore = SEM_FAILED;
+    // sem_t * done_semaphore = SEM_FAILED;
     FILE * output = NULL;
     SlaveProcess slaves[numSlaves];
 
@@ -72,15 +80,23 @@ int main(int argc, char * argv[]) {
         fprintf(stderr, "Error mapping shared memory");
         exit(1);
     }
-    shmAddr->done = 0;
+    // shmAddr->done = 0;
+    atomic_store(&shmAddr->done, 0);
+
+
     
 
     // Create semaphores
     sem_unlink(SEM_NAME);
-    if ((semaphore = sem_open(SEM_NAME, O_CREAT, 0660, 0)) == SEM_FAILED) {
+    // sem_unlink(SEM_DONE_NAME);
+    if ((semaphore = sem_open(SEM_NAME, O_CREAT | O_EXCL, 0660, 0)) == SEM_FAILED) {
         fprintf(stderr, "Error creating semaphore\n");
         exit(1);
     }
+    // if ((done_semaphore = sem_open(SEM_DONE_NAME, O_CREAT, 0660, 0)) == SEM_FAILED) {
+    //     fprintf(stderr, "Error creating semaphore done\n");
+    //     exit(1);
+    // }
     
     
     wait_for_view(); 
@@ -168,12 +184,17 @@ int main(int argc, char * argv[]) {
             }
         }
     }
-    shmAddr->done = 1;
+
+    // if (sem_post(done_semaphore) == -1) {
+    // fprintf(stderr, "sem_post done_semaphore failed");
+    // }
+    atomic_store(&shmAddr->done, 1);
     sem_post(semaphore);
+
     fprintf(stderr, "Content of shared memory:\n%s\n",shmAddr->buffer);
     // here we should close the rest of the pipes!
     for (int i= 0; i < numSlaves; i++) {
-        fprintf(stderr, "Closing slave %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
+        fprintf(stderr, "Closing slave PID's %d pipes. Readfd: %d, WriteFd: %d\n", slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
         close(slaves[i].readFd);
         close(slaves[i].writeFd);   
     }
@@ -203,11 +224,21 @@ int main(int argc, char * argv[]) {
         exit(1); 
     }
 
+    // if (sem_close(done_semaphore) == ERROR) {
+    //     fprintf(stderr, "Error closing semaphore");
+    //     exit(1); 
+    // }
+
     // unlink semaphore -> why first unlink before close?
     if (sem_unlink(SEM_NAME) == ERROR) {
         fprintf(stderr, "Error unlinking semaphore\n"); 
         exit(1); 
     }
+
+    // if (sem_unlink(SEM_DONE_NAME) == ERROR) {
+    //     fprintf(stderr, "Error unlinking semaphore\n"); 
+    //     exit(1); 
+    // }
 
     exit(0);
 }

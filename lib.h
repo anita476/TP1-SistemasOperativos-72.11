@@ -28,10 +28,11 @@
 
 #define SHM_PATH "/shm"
 #define SEM_PATH "/sem"
+#define SEM_DONE_PATH "/semDone"
 
 #define SHM_DEF_SIZE 0x40000
 
-#define MIN_SLAVES 5
+#define SLAVES 5
 
 typedef struct {
     int readFd; 
@@ -42,10 +43,10 @@ typedef struct {
 typedef struct{
     char *shmAddr; 
     sem_t *sem; 
+    sem_t *semDone;
     size_t bufferSize; 
     int fd; 
 
-    atomic_int done;
     // char buffer[BUFFER_SIZE]; /* to make sure we are defining th page structure correctly */
 
 } SharedMemoryStruct;

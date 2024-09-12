@@ -40,6 +40,11 @@ int main() {
             filePath[n] = 0;
         }
 
+        // Validate if filePath is not empty
+        if (filePath[0] == 0) {
+            continue;
+        }
+
         // fprintf(stderr, "Slave %d received filepath: %s\n", getpid(), filePath);
 
         //append the file path as part of the command
@@ -83,9 +88,8 @@ int main() {
         fprintf(stderr, "Slave %d: Error reading from stdin: %s\n", getpid(), strerror(errno));
     }
 
-    fprintf(stderr, "Slave %d exiting\n", getpid());
-    return 0;
-
+    // fprintf(stderr, "Slave %d exiting\n", getpid());
+    exit(0);
 
         // else {
         //     printf("slave>> %d\t%s\t\t\t%s\n", getpid(), filePath, result);

@@ -21,10 +21,10 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE); 
     }
 
-    setvbuf(stdout, NULL, _IONBF, 0);
 
     int numFiles = argc - 1;
-    int numSlaves = calculate_num_slaves(numFiles);
+    int filesPerSlave = 0;
+    int numSlaves = calculate_num_slaves(numFiles, &filesPerSlave);
 
     FILE * output = fopen(OUTPUT_FILE, "w");
     if (output == NULL) {
@@ -39,28 +39,19 @@ int main(int argc, char * argv[]) {
     ERROR_EXIT("Failed to allocate memory for slaves");
     }
 
+    setvbuf(stdout, NULL, _IONBF, 0);
 
     // initilize shared memory & semaphore
     SharedMemoryStruct *shmStruct = create_shared_memory_and_semaphore(numFiles);
-
     wait_for_view();
+
     
     // create slaves and communicate
+
     for (int i = 0; i < numSlaves; i++) {
         slaves[i].pid = create_slave_process(&slaves[i].readFd, &slaves[i].writeFd);
-
-        // // Set both read and write file descriptors to non-blocking mode
-        // int flags = fcntl(slaves[i].readFd, F_GETFL, 0);
-        // fcntl(slaves[i].readFd, F_SETFL, flags | O_NONBLOCK);
-        // flags = fcntl(slaves[i].writeFd, F_GETFL, 0);
-        // fcntl(slaves[i].writeFd, F_SETFL, flags | O_NONBLOCK);
-
-        // fprintf(stderr, "Created slave with PID %d, readFd: %d, writeFd: %d\n", 
-        //         slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
-
-        // give child starting file
-        if (send_file_to_slave(&slaves[i], argv[i+1]) < 0) {
-            ERROR_EXIT("Error sending initial file to slave");
+            if (send_file_to_slave(&slaves[i], argv[i+1]) < 0) {
+                fprintf(stderr, "Error sending file %s to slave %d\n", argv[i+1], slaves[i].pid);
         }
     }
 
@@ -68,6 +59,9 @@ int main(int argc, char * argv[]) {
 
     close_all_resources(shmStruct, output, slaves, numSlaves);
     free(slaves);
+
+    fprintf(stderr, "All done in app!\n");
+
 
     return 0;
 }
@@ -85,11 +79,11 @@ SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles){
         ERROR_EXIT("Error creating shared memory");
     }
 
-    if (ftruncate(shmStruct->fd, sizeof(SharedMemoryStruct)) == ERROR) {
+    if (ftruncate(shmStruct->fd, SHM_DEF_SIZE) == ERROR) {
         ERROR_EXIT("Error truncating shared memory");
     }
 
-    shmStruct->shmAddr = mmap(NULL, sizeof(SharedMemoryStruct), PROT_READ | PROT_WRITE, MAP_SHARED, shmStruct->fd, 0);
+    shmStruct->shmAddr = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmStruct->fd, 0);
     if (shmStruct->shmAddr == MAP_FAILED) {
         ERROR_EXIT("Error mapping shared memory");
     }
@@ -125,15 +119,15 @@ pid_t create_slave_process(int *readFd, int *writeFd) {
     // fprintf(stderr,"APP to SLAVE pipe: readEnd: %d, writeEnd: %d\n",appToSlave[0],appToSlave[1]);
     // fprintf(stderr, "SLAVE to APP pipe: readEnd: %d, writeEnd: %d\n",slaveToApp[0],slaveToApp[1]);
 
-    // // set pips to unbuffered mode
-    // FILE *app_to_slave_write = fdopen(appToSlave[WRITE_END], "w");
-    // FILE *slave_to_app_read = fdopen(slaveToApp[READ_END], "r");
-    // if (app_to_slave_write == NULL || slave_to_app_read == NULL) {
-    //     fprintf(stderr, "Error creating FILE streams");
-    //     return ERROR;
-    // }
-    // setvbuf(app_to_slave_write, NULL, _IONBF, 0);
-    // setvbuf(slave_to_app_read, NULL, _IONBF, 0);
+    // set pips to unbuffered mode
+    FILE *app_to_slave_write = fdopen(appToSlave[WRITE_END], "w");
+    FILE *slave_to_app_read = fdopen(slaveToApp[READ_END], "r");
+    if (app_to_slave_write == NULL || slave_to_app_read == NULL) {
+        fprintf(stderr, "Error creating FILE streams");
+        return ERROR;
+    }
+    setvbuf(app_to_slave_write, NULL, _IONBF, 0);
+    setvbuf(slave_to_app_read, NULL, _IONBF, 0);
     
     // Fork parent process
     pid_t pid = fork();
@@ -231,13 +225,24 @@ ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves) {
 
 
 // FixMe: find a better logic for the number of files sent at once 
-int calculate_num_slaves(int numFiles) {
-    int logic = floor(numFiles / 10);
-    if (logic < 1) return numFiles;
-    else { 
-        fprintf(stderr, "Slaves num: %d\n", SLAVES * logic);
-        return (SLAVES * logic);
-    };
+int calculate_num_slaves(int numFiles, int *filesPerSlave) {
+    int numSlaves;
+
+    // If there are more than 30 files, use 10% of files as children
+    if (numFiles > MAX_SLAVES) {
+        numSlaves = numFiles / 10;
+        *filesPerSlave = AVG_FILES_PER_SLAVE;
+    }
+    else if (numFiles <= MIN_SLAVES) {
+        numSlaves = numFiles;
+        *filesPerSlave = MIN_FILES_PER_SLAVE;
+    }
+    else {
+        numSlaves = numFiles / 2;
+        *filesPerSlave = AVG_FILES_PER_SLAVE; 
+    }
+
+    return numSlaves;
 
 }
 
@@ -305,14 +310,6 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
     sem_post(shmStruct->semDone);
     fprintf(stderr, "Done posting\n");
 
-    // Close all slave pipes
-    for (int i = 0; i < numSlaves; i++) {
-        fprintf(stderr, "Closing pipes for slave %d (readFd: %d, writeFd: %d)\n", 
-                slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
-        close(slaves[i].readFd);
-        close(slaves[i].writeFd);
-    }
-
     fprintf(stderr, "Content of shared memory:\n%s\n", shmStruct->shmAddr);
 }
 
@@ -328,41 +325,35 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
     // close output file 
     fclose(output);
 
+    sem_close(shmStruct->sem);
+    sem_close(shmStruct->semDone);
+
+    // Unmap shared memory
+    if (munmap(shmStruct->shmAddr, SHM_DEF_SIZE) == ERROR) {
+        ERROR_EXIT("Error unmapping shared memory\n");
+    } else {
+        fprintf(stderr, "Shared memory unmapped successfully\n");
+    }
+
+    // Unlink shared memory (only after view process is finished)
     shm_unlink(SHM_PATH);
 
-    if (sem_close(shmStruct->sem) == ERROR) {
-        ERROR_EXIT("Error closing semaphore");
-    }
+    // Unlink semaphores after use
     if (sem_unlink(SEM_PATH) == ERROR) {
         ERROR_EXIT("Error unlinking semaphore\n"); 
-    }
-
-    if (sem_close(shmStruct->semDone) == ERROR) {
-        ERROR_EXIT("Error closing semaphore");
     }
     if (sem_unlink(SEM_DONE_PATH) == ERROR) {
         ERROR_EXIT("Error unlinking semaphore\n"); 
     }
 
-    // unlinking shared memory -> munmap is needed
-    if (munmap(shmStruct->shmAddr, SHM_DEF_SIZE) == ERROR) {
-        ERROR_EXIT("Error unmapping shared memory\n");
-    }
-    // FixMe: delete later
-    else {
-        fprintf(stderr, "I unmapped shm\n");
-    }
-
-    if (close(shmStruct->fd) == ERROR) { //if i unlink view cant access anymore (namespace is deleted)
-        ERROR_EXIT("Error closing shared memory"); 
-    }
-
-
+        // Close all slave pipes
     for (int i = 0; i < numSlaves; i++) {
+        fprintf(stderr, "Closing pipes for slave %d (readFd: %d, writeFd: %d)\n", 
+                slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
         close(slaves[i].readFd);
         close(slaves[i].writeFd);
     }
-
+    // Free shared memory structure
     free(shmStruct);
 
 }

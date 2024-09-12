@@ -32,7 +32,10 @@
 
 #define SHM_DEF_SIZE 0x40000
 
-#define SLAVES 5
+#define MIN_SLAVES 5
+#define MAX_SLAVES 20
+#define MIN_FILES_PER_SLAVE 1
+#define AVG_FILES_PER_SLAVE 2
 
 typedef struct {
     int readFd; 

@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
         ERROR_EXIT("Error opening shared memory in view\n");
     }
 
-    if ((shmData->shmAddr = mmap(NULL, sizeof(SharedMemoryStruct), PROT_READ, MAP_SHARED, shmData->fd, 0)) == MAP_FAILED) {
+    if ((shmData->shmAddr = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shmData->fd, 0)) == MAP_FAILED) {
         ERROR_EXIT("Error mapping shared memory from view\n");
     }
 
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     } 
 
     if ((shmData->semDone = sem_open(SEM_DONE_PATH, 0)) == SEM_FAILED ) {
-        ERROR_EXIT("Error opening shmData->sem in view\n");
+        ERROR_EXIT("Error opening shmData->semDone in view\n");
     } 
     //write header 
     printf(HEADER); // FixMe: writing header twice?? why is it also in app.c 
@@ -77,7 +77,10 @@ int main(int argc, char *argv[]) {
     char buffer[MAX_RES_LENGTH];
     size_t readIdx = 0;
 
-    sem_wait(shmData->semDone);
+    if (sem_wait(shmData->semDone) != 0) {
+        fprintf(stderr, "Creo que esta bien..\n");
+    }
+
 
     while (1) {
         // fprintf(stderr, "Waiting for semaphore signal to start reading...\n");
@@ -88,9 +91,13 @@ int main(int argc, char *argv[]) {
         }
 
         fprintf(stderr, "Received signal, reading...\n");
-        if (shmData->shmAddr[readIdx] == 0) {
-            break; 
+
+        if (shmData->shmAddr[readIdx] == '\0') {
+        // If we hit a null character, there is no more data to read, so exit
+            fprintf(stderr, "No more data to read. Exiting...\n");
+            break;
         }
+
         size_t len = 0;
         while (shmData->shmAddr[readIdx + len] != '\n') {
             len++;
@@ -98,16 +105,23 @@ int main(int argc, char *argv[]) {
 
         memcpy(buffer, shmData->shmAddr + readIdx, ++len);  // Include newline
         buffer[len] = '\0';  // Null-terminate the string
-        readIdx += len + 1;
+        readIdx += len;
 
         printf("view>> %s", buffer);
         fflush(stdout);
 
-        if (sem_trywait(shmData->semDone) == 0) {
-            fprintf(stderr, "Processing complete. Exiting...\n");
-            break;
-        }
+        sem_post(shmData->sem);
+
+        // if (sem_trywait(shmData->semDone) == 0) {
+        //     fprintf(stderr, "Processing complete. Exiting...\n");
+        //     break;
+        // }
     
+    }
+
+    fprintf(stderr, "Out of loop\n");
+    if (sem_post(shmData->semDone) == 0) {
+        fprintf(stderr, "Processing complete. Exiting...\n");
     }
     fprintf(stderr, "View process: All data read, exiting.\n");
 
@@ -118,6 +132,8 @@ int main(int argc, char *argv[]) {
     munmap(shmData->shmAddr, SHM_DEF_SIZE);
     close(shmData->fd);
     free(shmData);
+
+    fprintf(stderr, "All done in view!\n");
 
     return 0;
 }

@@ -17,7 +17,6 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE); 
     }
 
-
     int numFiles = argc - 1;
     int filesPerSlave = 0;
     int numSlaves = calculate_num_slaves(numFiles, &filesPerSlave);
@@ -32,7 +31,7 @@ int main(int argc, char * argv[]) {
     // sem_t *semaphore = SEM_FAILED;
     SlaveProcess *slaves = malloc(sizeof(SlaveProcess) * numSlaves);
     if (slaves == NULL) {
-    ERROR_EXIT("Failed to allocate memory for slaves");
+        ERROR_EXIT("Failed to allocate memory for slaves");
     }
 
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -46,8 +45,8 @@ int main(int argc, char * argv[]) {
 
     for (int i = 0; i < numSlaves; i++) {
         slaves[i].pid = create_slave_process(&slaves[i].readFd, &slaves[i].writeFd);
-            if (send_file_to_slave(&slaves[i], argv[i+1]) < 0) {
-                fprintf(stderr, "Error sending file %s to slave %d\n", argv[i+1], slaves[i].pid);
+            if (send_file_to_slave(&slaves[i], argv[i + 1]) < 0) {
+                fprintf(stderr, "Error sending file %s to slave %d\n", argv[i + 1], slaves[i].pid);
         }
     }
 
@@ -58,12 +57,10 @@ int main(int argc, char * argv[]) {
 
     fprintf(stderr, "All done in app!\n");
 
-
     return 0;
 }
 
-
-SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles){
+SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles) {
     SharedMemoryStruct *shmStruct = malloc(sizeof(SharedMemoryStruct));
 
     // FixMe: consider passing in the path in the function instead of using a constant
@@ -92,7 +89,6 @@ SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles){
         ERROR_EXIT("Error creating semaphore");
     }
     
-
     sem_unlink(SEM_DONE_PATH);
     shmStruct->semDone = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
     if (shmStruct->semDone == SEM_FAILED) {
@@ -101,7 +97,6 @@ SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles){
 
     return shmStruct;
 }
-
 
 // Returns pid's of child processes 
 pid_t create_slave_process(int *readFd, int *writeFd) {
@@ -115,13 +110,15 @@ pid_t create_slave_process(int *readFd, int *writeFd) {
     // fprintf(stderr,"APP to SLAVE pipe: readEnd: %d, writeEnd: %d\n",appToSlave[0],appToSlave[1]);
     // fprintf(stderr, "SLAVE to APP pipe: readEnd: %d, writeEnd: %d\n",slaveToApp[0],slaveToApp[1]);
 
-    // set pips to unbuffered mode
     FILE *app_to_slave_write = fdopen(appToSlave[WRITE_END], "w");
     FILE *slave_to_app_read = fdopen(slaveToApp[READ_END], "r");
+
     if (app_to_slave_write == NULL || slave_to_app_read == NULL) {
         fprintf(stderr, "Error creating FILE streams");
         return ERROR;
     }
+
+    // Set pipes to unbuffered mode
     setvbuf(app_to_slave_write, NULL, _IONBF, 0);
     setvbuf(slave_to_app_read, NULL, _IONBF, 0);
     
@@ -166,7 +163,7 @@ pid_t create_slave_process(int *readFd, int *writeFd) {
             ERROR_EXIT("Error closing pipe ends");
         }
         // fprintf(stderr,"I closed fd: %d and %d in parent\n", appToSlave[READ_END],slaveToApp[WRITE_END]);
-        //return values:
+
         *readFd = slaveToApp[READ_END];
         *writeFd = appToSlave[WRITE_END];
     }
@@ -180,12 +177,15 @@ pid_t create_slave_process(int *readFd, int *writeFd) {
 int send_file_to_slave(SlaveProcess *slave, const char *filename) {
     ssize_t bytesWritten = write(slave->writeFd, filename, strlen(filename));
     // fprintf(stderr, "Writing file %s to slave w pid %d from fd write: %d\n", filename, slave->pid, slave->writeFd);
-    if (bytesWritten < 0){
+    
+    if (bytesWritten < 0) {
         ERROR_EXIT("Error writing to slave");
     }
+    
     if (write(slave->writeFd, "\n", 1) != 1) {
         ERROR_EXIT("Error writing to slave");
     }
+
     return 0;
 }
 
@@ -201,7 +201,8 @@ ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves) {
         if (slaves[i].readFd > maxFd) {
             maxFd = slaves[i].readFd;
         }
-    } 
+    }
+
     int selectRes; 
     if ((selectRes = select(maxFd + 1, &readFdSet, NULL, NULL, NULL)) < 0) {
         ERROR_EXIT("Error selecting ready slaves");
@@ -216,6 +217,7 @@ ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves) {
             readySlaves[readyCount++] = i;
         }
     }
+
     return readyCount;
 }
 
@@ -229,10 +231,12 @@ int calculate_num_slaves(int numFiles, int *filesPerSlave) {
         numSlaves = numFiles / 10;
         *filesPerSlave = AVG_FILES_PER_SLAVE;
     }
+
     else if (numFiles <= MIN_SLAVES) {
         numSlaves = numFiles;
         *filesPerSlave = MIN_FILES_PER_SLAVE;
     }
+
     else {
         numSlaves = numFiles / 2;
         *filesPerSlave = AVG_FILES_PER_SLAVE; 
@@ -267,17 +271,19 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
                 if (fprintf(outputFile, "%s", buffer) < 0) {
                     ERROR_EXIT("Error writing to output file");
                 }
+
                 fflush(outputFile);
                 fprintf(stderr, "Waiting on semaphore...\n");
+
                 if (sem_wait(shmStruct->sem) != 0) {
                     ERROR_EXIT("Error waiting on semaphore");
                 }
+
                 fprintf(stderr, "Semaphore acquired, about to write...\n");
 
                 writtenCount += sprintf(shmStruct->shmAddr + writtenCount, 
                                             "%d: %s", slave->pid, buffer);
 
-                
                 fprintf(stderr, "Data written to shared memory\n");
 
                 sem_post(shmStruct->sem);
@@ -293,9 +299,14 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
                     }
                     nextToProcess++;
                 }
-            } else if (bytesRead == 0) {
+
+            } 
+            
+            else if (bytesRead == 0) {
                 fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
-            } else {
+            } 
+            
+            else {
                 fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
             }
         }
@@ -304,8 +315,8 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
     // Signal that we're done processing
     fprintf(stderr, "Done processing, posting to semDone\n");
     sem_post(shmStruct->semDone);
-    fprintf(stderr, "Done posting\n");
 
+    fprintf(stderr, "Done posting\n");
     fprintf(stderr, "Content of shared memory:\n%s\n", shmStruct->shmAddr);
 }
 
@@ -338,6 +349,7 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
     if (sem_unlink(SEM_PATH) == ERROR) {
         ERROR_EXIT("Error unlinking semaphore\n"); 
     }
+
     if (sem_unlink(SEM_DONE_PATH) == ERROR) {
         ERROR_EXIT("Error unlinking semaphore\n"); 
     }
@@ -349,7 +361,7 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
         close(slaves[i].readFd);
         close(slaves[i].writeFd);
     }
+
     // Free shared memory structure
     free(shmStruct);
-
 }

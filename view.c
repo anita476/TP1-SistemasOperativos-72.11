@@ -4,7 +4,6 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-#include <signal.h>
 
 #define NAME_SIZE 10
 

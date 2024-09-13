@@ -6,10 +6,6 @@
 #include "lib.h"
 #include "app.h"
 
-#include <sys/select.h>
-#include <math.h>   
-#include <signal.h>
-
 #define OUTPUT_FILE "output.txt"
 
 int main(int argc, char * argv[]) {

@@ -3,6 +3,7 @@
 #include <semaphore.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>

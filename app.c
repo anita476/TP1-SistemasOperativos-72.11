@@ -329,7 +329,7 @@ void wait_for_view() {
 }
 
 void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProcess *slaves, int numSlaves) {
-    // close output file 
+    // close output file
     fclose(output);
 
     sem_close(shmStruct->sem);
@@ -338,7 +338,9 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
     // Unmap shared memory
     if (munmap(shmStruct->shmAddr, SHM_DEF_SIZE) == ERROR) {
         ERROR_EXIT("Error unmapping shared memory\n");
-    } else {
+    } 
+    
+    else {
         fprintf(stderr, "Shared memory unmapped successfully\n");
     }
 

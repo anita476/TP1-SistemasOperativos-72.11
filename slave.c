@@ -6,9 +6,9 @@
 #include "lib.h"
 #include <ctype.h>
 
-// slave starts and reads from stdin , and afterwards writes to stdout
+// slave starts and reads from stdin, and afterwards writes to stdout
 // in master we should change STDIN_FILENO and STDOUT_FILENO 
-// that way we can eexecute slave from master and slave doesnt notice"
+// that way we can execute slave from master and slave doesnt notice"
 
 int main() {
     // fprintf(stderr, "Slave process started with PID %d\n", getpid());
@@ -26,6 +26,7 @@ int main() {
     // dont remember why the -1 de PI 
     int n;
     // fprintf(stderr, "Slave is going to read from %d\n", STDIN_FILENO);
+
     while ((n = read(STDIN_FILENO, filePath, sizeof(filePath) - 1))) {
         if (n < 0) {
             fprintf(stdout, "An error ocurred while reading the file path");
@@ -56,7 +57,6 @@ int main() {
             fprintf(stderr, "Slave %d: Failed to execute md5sum command\n", getpid());
             continue;
         }
-
 
         if (fgets(result, MAX_MD5_LENGTH, md5sum) == NULL) {
             fprintf(stderr, "Slave %d: Failed to read md5sum result\n", getpid());
@@ -89,12 +89,12 @@ int main() {
     }
 
     // fprintf(stderr, "Slave %d exiting\n", getpid());
+
     exit(0);
 
-        // else {
-        //     printf("slave>> %d\t%s\t\t\t%s\n", getpid(), filePath, result);
-        // }
+    // else {
+    //     printf("slave>> %d\t%s\t\t\t%s\n", getpid(), filePath, result);
+    // }
 
-        // pclose(md5sum);        
-            
+    // pclose(md5sum);           
 }

@@ -281,7 +281,7 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
                 fprintf(stderr, "Semaphore acquired, about to write...\n");
 
                 writtenCount += sprintf(shmStruct->shmAddr + writtenCount, 
-                                            "%d: %s", slave->pid, buffer);
+                                            "%s", buffer);
 
                 fprintf(stderr, "Data written to shared memory\n");
 
@@ -321,10 +321,12 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
 
 
 void wait_for_view() {
-    sleep(2);
     printf("%s\n", SHM_PATH);
     printf("%s\n", SEM_PATH);
     printf("%s\n", SEM_DONE_PATH);
+    fprintf(stderr, "Waiting for view to connect\n");
+    sleep(3);
+
     fflush(stdout);
 }
 
@@ -347,12 +349,17 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
         ERROR_EXIT("Error unlinking shm\n");
     } // considero que esto esta mal, y habria que pasarle el nombre como param de la funcion
 
+
     if ((sem_close(shmStruct->sem) == ERROR) || (sem_close(shmStruct->semDone) == ERROR)) {
         ERROR_EXIT("Error closing semaphores\n");
     }
     if ((sem_unlink(SEM_PATH) == ERROR) || (sem_unlink(SEM_DONE_PATH) == ERROR)) {
         ERROR_EXIT("Error unlinking semaphore\n"); 
     }
+
+    fprintf(stderr, "Before closing pipes\n");
+    sleep(2);
+
 
     for (int i = 0; i < numSlaves; i++) {
         fprintf(stderr, "Closing pipes for slave %d (readFd: %d, writeFd: %d)\n", 

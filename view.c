@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
     // fprintf(stderr,"%d\n", argc);
-    // fprintf(stderr, "In view...\n");
+    fprintf(stderr, "\n\nConnected to view...\n\n");
 
     /*initializing to avoid PVS*/
     char shmName[NAME_SIZE] = {0}; 
@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
 
     if (argc == 4) {
         strncpy(shmName, argv[1], sizeof(shmName) - 1);
-        strncpy(semName, argv[1], sizeof(semName) - 1);
-        strncpy(semDoneName, argv[1], sizeof(semDoneName) - 1);
+        strncpy(semName, argv[2], sizeof(semName) - 1);
+        strncpy(semDoneName, argv[3], sizeof(semDoneName) - 1);
     } else if (argc == 1) { // caso pipe 
         // I set  %9s to avoid the PVS warning
         // otra opcion: hacer scanf(%9s %9s %9s) == 3 
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
         exit(ERROR);
     }  
 
-    fprintf(stderr, "Attempting to open shared memory: %s\n", shmName);
+    // fprintf(stderr, "Attempting to open shared memory: %s\n", shmName);
 
     SharedMemoryStruct *shmData = malloc(sizeof(SharedMemoryStruct));
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
         ERROR_EXIT("Error mapping shared memory from view\n");
     }
 
-    fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData->shmAddr);
+    // fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData->shmAddr);
 
     if ((shmData->sem = sem_open(semName, 0)) == SEM_FAILED) {
         ERROR_EXIT("Error opening shmData->sem in view\n");
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
             ERROR_EXIT("Error waiting on semaphore");
         }
 
-        fprintf(stderr, "Received signal, reading...\n");
+        // fprintf(stderr, "Received signal, reading...\n");
 
         // If we hit a null character, there is no more data to read, so exit
         if (shmData->shmAddr[readIdx] == '\0') {

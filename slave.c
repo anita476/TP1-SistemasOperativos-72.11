@@ -68,7 +68,7 @@ int main() {
         result[strcspn(result, "\n")] = 0;
 
         char output[MAX_RES_LENGTH];
-        int written = snprintf(output, sizeof(output), "%d\t%s\t%s\n", getpid(), filePath, result);
+        int written = snprintf(output, sizeof(output), "slave>> %d\t%s\t%s\n", getpid(), filePath, result);
         
         if (written < 0 || written >= sizeof(output)) {
             fprintf(stderr, "Slave %d: Error formatting output\n", getpid());

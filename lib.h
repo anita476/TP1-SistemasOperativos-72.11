@@ -1,26 +1,60 @@
-#include <stdio.h>
+#include <stdatomic.h>
+#include <sys/types.h>
+#include <semaphore.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #define ERROR (-1) 
 
 #define READ_END 0 
 #define WRITE_END 1
 
+
 //based on Linux system standard
-#define MAX_FILE_PATH 4096
 // maximum of hash is 128 bits
-#define MAX_HASH 32
+#define MAX_BUFFER_LENGTH 1024
 
+#define MAX_MD5_LENGTH 32
+#define MAX_PID_LENGTH 20
+#define MAX_FILEPATH_LENGTH 4096
+#define EXTRA_CHARS 4 // two spaces and a newline and one more just in case 
+#define MAX_RES_LENGTH (MAX_FILEPATH_LENGTH + MAX_MD5_LENGTH + MAX_PID_LENGTH)
 
-#define SHM_NAME "shmApp"
+#define SHM_PATH "/shm"
+#define SEM_PATH "/sem"
+#define SEM_DONE_PATH "/semDone"
+
 #define SHM_DEF_SIZE 0x40000
-#define SEM_NAME "semApp"
 
-#define SLAVES 5 
-#define BUFFER_SIZE 4096
+#define MIN_SLAVES 5
+#define MAX_SLAVES 20
+#define MIN_FILES_PER_SLAVE 1
+#define AVG_FILES_PER_SLAVE 2
 
+typedef struct {
+    int readFd; 
+    int writeFd; 
+    pid_t pid; 
+} SlaveProcess;
 
-// taken from pselect limitations
-#define MAX_FD 1024
+typedef struct {
+    char *shmAddr; 
+    sem_t *sem; 
+    sem_t *semDone;
+    size_t bufferSize; 
+    int fd; 
+
+    // char buffer[BUFFER_SIZE]; /* to make sure we are defining th page structure correctly */
+
+} SharedMemoryStruct;
+
+#define ERROR_EXIT(msg) do {perror(msg); exit(EXIT_FAILURE); } while (0)
+
+#define HEADER "PID\t\t\tFILE\t\t\t\tHASH\n"

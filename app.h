@@ -6,7 +6,7 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
 ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves);
 int send_file_to_slave(SlaveProcess *slave, const char *filename);
 int calculate_num_slaves(int numFiles, int *filesPerSlave);
-pid_t create_slave_process(int *readFd, int *writeFd);
+void create_slave_process(SlaveProcess *slave);
 void wait_for_view();
 
 SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles);

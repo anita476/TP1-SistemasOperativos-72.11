@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include <sys/types.h>
 #include <semaphore.h>
 #include <sys/stat.h>
@@ -8,7 +9,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <stdatomic.h>
 
 #define ERROR (-1) 
 
@@ -43,7 +43,7 @@ typedef struct {
     pid_t pid; 
 } SlaveProcess;
 
-typedef struct{
+typedef struct {
     char *shmAddr; 
     sem_t *sem; 
     sem_t *semDone;

@@ -5,7 +5,6 @@
 
 #include "lib.h"
 
-#define NAME_SIZE 10
 
 int main(int argc, char *argv[]) {
     // fprintf(stderr,"%d\n", argc);
@@ -13,17 +12,17 @@ int main(int argc, char *argv[]) {
 
     /*initializing to avoid PVS*/
     char shmName[NAME_SIZE] = {0}; 
-    char semName[NAME_SIZE] = {0};
-    char semDoneName[NAME_SIZE]= {0};    
+    // char semName[NAME_SIZE] = {0};
+    // char semDoneName[NAME_SIZE]= {0};    
 
     // for (int i = 0; i < argc; i++) {
     //     fprintf(stderr, "view %d>> %s\n", i, argv[i]);
     // }
 
-    if (argc == 4) {
+    if (argc == 2) {
         strncpy(shmName, argv[1], sizeof(shmName) - 1);
-        strncpy(semName, argv[2], sizeof(semName) - 1);
-        strncpy(semDoneName, argv[3], sizeof(semDoneName) - 1);
+        // strncpy(semName, argv[2], sizeof(semName) - 1);
+        // strncpy(semDoneName, argv[3], sizeof(semDoneName) - 1);
     } else if (argc == 1) { // caso pipe 
         // I set  %9s to avoid the PVS warning
         // otra opcion: hacer scanf(%9s %9s %9s) == 3 
@@ -32,20 +31,20 @@ int main(int argc, char *argv[]) {
         }
         fprintf(stderr,"View know shm is: %s\n", shmName);
 
-        if(scanf("%9s", semName) < 0) {
-            ERROR_EXIT("Error reading semName\n");
-            exit(ERROR);
-        }
+        // if(scanf("%9s", semName) < 0) {
+        //     ERROR_EXIT("Error reading semName\n");
+        //     exit(ERROR);
+        // }
 
-        fprintf(stderr, "View knows sem is: %s\n",semName);
+        // fprintf(stderr, "View knows sem is: %s\n",semName);
 
-        if(scanf("%9s", semDoneName) < 0) {
-            ERROR_EXIT("Error reading semDoneName\n");
-        }
+        // if(scanf("%9s", semDoneName) < 0) {
+        //     ERROR_EXIT("Error reading semDoneName\n");
+        // }
         
-        fprintf(stderr, "View knows sem is: %s\n",semName);
+        // fprintf(stderr, "View knows sem is: %s\n",semName);
     } else {
-        fprintf(stderr, "Usage: %s [shm_name sem_name sem_done_name]\n", argv[0]);
+        fprintf(stderr, "Usage: %s /shm\n", argv[0]);
         exit(ERROR);
     }  
 
@@ -61,13 +60,15 @@ int main(int argc, char *argv[]) {
         ERROR_EXIT("Error mapping shared memory from view\n");
     }
 
-    // fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData->shmAddr);
+    // // fprintf(stderr, "Shared memory mapped at address: %p\n", (void*)shmData->shmAddr);
+    // fprintf(stderr, "Attempting to open semaphore: %s\n", shmData->semName);
 
-    if ((shmData->sem = sem_open(semName, 0)) == SEM_FAILED) {
+    // no funciona shmData->semName 
+    if ((shmData->sem = sem_open(SEM_PATH, 0)) == SEM_FAILED) {
         ERROR_EXIT("Error opening shmData->sem in view\n");
     } 
 
-    if ((shmData->semDone = sem_open(semDoneName, 0)) == SEM_FAILED) {
+    if ((shmData->semDone = sem_open(SEM_DONE_PATH, 0)) == SEM_FAILED) {
         ERROR_EXIT("Error opening shmData->semDone in view\n");
     } 
  

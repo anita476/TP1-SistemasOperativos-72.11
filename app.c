@@ -59,7 +59,7 @@ int main(int argc, char * argv[]) {
     return 0;
 }
 
-SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles) {
+SharedMemoryStruct *create_shared_memory_and_semaphore(int numFiles) {
     SharedMemoryStruct *shmStruct = malloc(sizeof(SharedMemoryStruct));
 
     // FixMe: consider passing in the path in the function instead of using a constant
@@ -82,17 +82,24 @@ SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles) {
 
     shmStruct->bufferSize = numFiles * MAX_RES_LENGTH;
 
-    sem_unlink(SEM_PATH);
-    shmStruct->sem = sem_open(SEM_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
+    strncpy(shmStruct->semName, SEM_PATH, NAME_SIZE - 1);
+    shmStruct->semName[NAME_SIZE - 1] = '\0'; 
+
+    strncpy(shmStruct->semDoneName, SEM_DONE_PATH, NAME_SIZE - 1);
+    shmStruct->semDoneName[NAME_SIZE - 1] = '\0'; 
+
+    sem_unlink(shmStruct->semName);
+    shmStruct->sem = sem_open(shmStruct->semName, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
     if (shmStruct->sem == SEM_FAILED) {
         ERROR_EXIT("Error creating semaphore");
     }
     
-    sem_unlink(SEM_DONE_PATH);
-    shmStruct->semDone = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
+    sem_unlink(shmStruct->semDoneName);
+    shmStruct->semDone = sem_open(shmStruct->semDoneName, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
     if (shmStruct->semDone == SEM_FAILED) {
         ERROR_EXIT("Error creating semaphore");
     }
+
 
     return shmStruct;
 }
@@ -322,8 +329,8 @@ void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFile
 
 void wait_for_view() {
     printf("%s\n", SHM_PATH);
-    printf("%s\n", SEM_PATH);
-    printf("%s\n", SEM_DONE_PATH);
+    // printf("%s\n", SEM_PATH);
+    // printf("%s\n", SEM_DONE_PATH);
     fprintf(stderr, "Waiting for view to connect\n");
     sleep(3);
 
@@ -333,6 +340,14 @@ void wait_for_view() {
 void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProcess *slaves, int numSlaves) {
     // close output file
     fclose(output);
+
+    if ((sem_close(shmStruct->sem) == ERROR) || (sem_close(shmStruct->semDone) == ERROR)) {
+        ERROR_EXIT("Error closing semaphores\n");
+    }
+    if ((sem_unlink(shmStruct->semName) == ERROR) || (sem_unlink(shmStruct->semDoneName) == ERROR)) {
+        ERROR_EXIT("Error unlinking semaphore\n"); 
+    }
+
 
     // order is unmap -> close -> unlink
     if (munmap(shmStruct->shmAddr, SHM_DEF_SIZE) == ERROR) {
@@ -350,13 +365,7 @@ void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProce
     } // considero que esto esta mal, y habria que pasarle el nombre como param de la funcion
 
 
-    if ((sem_close(shmStruct->sem) == ERROR) || (sem_close(shmStruct->semDone) == ERROR)) {
-        ERROR_EXIT("Error closing semaphores\n");
-    }
-    if ((sem_unlink(SEM_PATH) == ERROR) || (sem_unlink(SEM_DONE_PATH) == ERROR)) {
-        ERROR_EXIT("Error unlinking semaphore\n"); 
-    }
-
+    
     fprintf(stderr, "Before closing pipes\n");
     sleep(2);
 

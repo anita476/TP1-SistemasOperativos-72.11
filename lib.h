@@ -55,10 +55,10 @@ typedef struct {
     size_t buffer_size; 
     int shm_fd; 
 
-    char sync_sem_name[NAME_SIZE];
-    char done_semaphoreName[NAME_SIZE];
+    int current_position;
 
-    // char buffer[BUFFER_SIZE]; /* to make sure we are defining th page structure correctly */
+    char sync_sem_name[NAME_SIZE];
+    char done_sem_name[NAME_SIZE];
 
 } SharedMemoryContext;
 
@@ -66,4 +66,5 @@ typedef struct {
 void check_error(int return_value, const char *message);
 SharedMemoryContext *create_resources(int num_files);
 void close_resources(SharedMemoryContext *shm);
-void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves);
+void destroy_resources(SharedMemoryContext *shm);
+SharedMemoryContext *open_resources(const char *shm_path);

@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
         strncpy(shm_path, argv[1], sizeof(shm_path) - 1);
     } else if (argc == 1) { // caso pipe 
         // I set  %9s to avoid the PVS warning
-        check_error(scanf("%9s", shm_path), ERROR, "Failed to read shm_path");
+        check_error(scanf("%9s", shm_path) < 0, "Failed to read shm_path");
         
         fprintf(stderr,"View know shm is: %s\n", shm_path);
     } else {
@@ -25,50 +25,55 @@ int main(int argc, char *argv[]) {
     }  
 
     SharedMemoryContext *shm_data = open_resources(shm_path);
-    check_error(shm_data, NULL, "Failed to allocate memory for shared memory in view");
+    check_error(shm_data == NULL, "Failed to allocate memory for shared memory in view");
  
     printf(HEADER); // FixMe: writing header twice?? why is it also in app.c 
     fflush(stdout);
 
     char buffer[MAX_RES_LENGTH];
-    size_t read_idx = 0;
+    size_t read_position = 0;
 
-    sem_wait(shm_data->done_semaphore);
+    // sem_wait(shm_data->done_semaphore);
 
     while (1) {
         if (sem_wait(shm_data->sync_semaphore) != 0) {
-            fprintf(stderr, "..."); // not too sure what to write here
-        }
-
-        // If we hit a null character, there is no more data to read, so exit
-        if (shm_data->shm_addr[read_idx] == '\0') {
-            fprintf(stderr, "No more data to read. Exiting...\n");
+            perror("Failed to wait on sync semaphore");
             break;
         }
 
-        size_t len = 0;
-        while (shm_data->shm_addr[read_idx + len] != '\n') {
-            len++;
-        }
-
-        memcpy(buffer, shm_data->shm_addr + read_idx, ++len);  // Include newline
-        buffer[len] = '\0';  // Null-terminate string
-        read_idx += len;
-
-        printf("view>> %s", buffer);
-        fflush(stdout);
-
-        sem_post(shm_data->sync_semaphore);
-
-        // if (sem_trywait(shm_data->done_semaphore) == 0) {
-        //     fprintf(stderr, "Processing complete. Exiting...\n");
+        // If we hit a null character, there is no more data to read, so exit
+        // if (shm_data->shm_addr[read_position] == '\0') {
+        //     fprintf(stderr, "No more data to read. Exiting...\n");
         //     break;
         // }
+
+        // size_t len = 0;
+        // while (shm_data->shm_addr[read_idx + len] != '\n') {
+        //     len++;
+        // }
+
+        while (read_position < shm_data->current_position) {
+            size_t remaining = shm_data->current_position - read_position;
+            size_t to_read = (remaining < MAX_RES_LENGTH - 1) ? remaining : (MAX_RES_LENGTH - 1);
+            
+            memcpy(buffer, shm_data->shm_addr + read_position, to_read);
+            buffer[to_read] = '\0';
+
+            printf("view>> %s", buffer);
+            fflush(stdout);
+
+            read_position += to_read;
+        }
+        
+        sem_post(shm_data->sync_semaphore);
+
+        if (sem_trywait(shm_data->done_semaphore) == 0) {
+            fprintf(stderr, "Processing complete. Exiting...\n");
+            break;
+        }
     }
 
-    if (sem_post(shm_data->done_semaphore) == 0) {
-        fprintf(stderr, "Processing complete. Exiting...\n");
-    }
+
 
     fprintf(stderr, "View process: All data read, exiting.\n");
 

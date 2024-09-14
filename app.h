@@ -1,12 +1,13 @@
 #include <sys/select.h>
-#include <math.h>
 
-void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFiles, char *files[], SharedMemoryStruct *shmStruct, FILE *outputFile);
-void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProcess *slaves, int numSlaves);
-ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves);
-int send_file_to_slave(SlaveProcess *slave, const char *filename);
-int calculate_num_slaves(int numFiles, int *filesPerSlave);
-void create_slave_process(SlaveProcess *slave);
+int calculate_num_slaves(int num_files);
+
+void create_slave_process(SlaveProcessInfo *slave);
+
+void close_slaves(SlaveProcessInfo *slaves);
+
+int send_file_to_slave(SlaveProcessInfo *slave, const char *filename);
+
 void wait_for_view();
 
-SharedMemoryStruct * create_shared_memory_and_semaphore(int numFiles);
+ssize_t poll_ready_slaves(SlaveProcessInfo *slaves, int num_slaves, int *ready_slaves);

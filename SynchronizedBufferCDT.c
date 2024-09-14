@@ -4,7 +4,7 @@
 //     char * sharedMemoryBaseAddress;
 //     sem_t * mutexSemaphore; 
 //     sem_t * fullBufferSemaphore; 
-//     size_t bufferSize; 
+//     size_t buffer_size; 
 //     int sharedMemoryFd; 
 //     char * sharedMemoryPath; 
 //     char * mutexSemaphorePath; 
@@ -16,16 +16,16 @@
 //     exit(EXIT_FAILURE);
 // }
 
-// SynchronizedSharedBufferADT createSynchronizedSharedBuffer(const restrict char * id, size_t bufferSize) {
+// SynchronizedSharedBufferADT createSynchronizedSharedBuffer(const restrict char * id, size_t buffer_size) {
 //     SynchronizedSharedBufferADT sharedBuffer = (SynchronizedSharedBufferADT) malloc(sizeof(struct SynchronizedSharedBufferCDT));
 //     if (sharedBuffer == NULL) {
 //         handleError("malloc");
 //     }
 
-//     sharedBuffer->bufferSize = bufferSize; 
+//     sharedBuffer->buffer_size = buffer_size; 
 //     sharedBuffer->sharedMemoryPath = "/shm" + id; // FixMe 
-//     sharedBuffer->mutexSemaphorePath = "/sem-mutex" + id; // FixMe
-//     sharedBuffer->fullBufferSemaphorePath = "/sem-full" + id; // FixMe
+//     sharedBuffer->mutexSemaphorePath = "/sync_semaphore-mutex" + id; // FixMe
+//     sharedBuffer->fullBufferSemaphorePath = "/sync_semaphore-full" + id; // FixMe
 // }
 
 // void unlinkPreviousResources(SynchronizedSharedBufferADT sharedBuffer) {
@@ -48,19 +48,19 @@
 //         handleError("sem_open");
 //     }
 
-//     if ((sharedBuffer->sharedMemoryFd, sharedBuffer->bufferSize + sizeof(long))<0) { // no entiendo aca porque agrega sizeof(long)
+//     if ((sharedBuffer->sharedMemoryFd, sharedBuffer->buffer_size + sizeof(long))<0) { // no entiendo aca porque agrega sizeof(long)
 //         handleError("shm_open");
 //     }
-//     if (ftruncate(sharedBuffer->sharedMemoryFd, sharedBuffer->bufferSize+sizeof(long)) < 0) {
+//     if (ftruncate(sharedBuffer->sharedMemoryFd, sharedBuffer->buffer_size+sizeof(long)) < 0) {
 //         handleError("ftruncate");
 //     }
-//     if ((sharedBuffer->sharedMemoryBaseAddress = mmap(NULL, sharedBuffer->bufferSize + sizeof(long), PROT_READ | PROT_WRITE, MAP_SHARED, sharedBuffer->sharedMemoryFd, 0))) {
+//     if ((sharedBuffer->sharedMemoryBaseAddress = mmap(NULL, sharedBuffer->buffer_size + sizeof(long), PROT_READ | PROT_WRITE, MAP_SHARED, sharedBuffer->sharedMemoryFd, 0))) {
 //         handleError("mmap");
 //     }
 // }
 
-// SynchronizedSharedBufferADT openSynchronizedSharedBuffer(const restrict char * id, size_t bufferSize) {
-//     SynchronizedSharedBufferADT sharedBuffer = createBaseSynchronizedSharedBuffer(id, bufferSize);
+// SynchronizedSharedBufferADT openSynchronizedSharedBuffer(const restrict char * id, size_t buffer_size) {
+//     SynchronizedSharedBufferADT sharedBuffer = createBaseSynchronizedSharedBuffer(id, buffer_size);
 //     openResources(sharedBuffer); 
 //     return sharedBuffer;
 // }
@@ -77,13 +77,13 @@
 //         handleError("shm_open");
 //     }
 
-//     if ((sharedBuffer->sharedMemoryBaseAddress = mmap(NULL, sharedBuffer->bufferSize+sizeof(long), PROT_WRITE | PROT_READ, MAP_SHARED, &sharedBuffer->sharedMemoryFd, 0))) {
+//     if ((sharedBuffer->sharedMemoryBaseAddress = mmap(NULL, sharedBuffer->buffer_size+sizeof(long), PROT_WRITE | PROT_READ, MAP_SHARED, &sharedBuffer->sharedMemoryFd, 0))) {
 //         handleError("mmap");
 //     }
 // }
 
 // void closeSynchronizedSharedBuffer(SynchronizedSharedBufferADT sharedBuffer) {
-//     if (munmap(sharedBuffer->sharedMemoryBaseAddress, sharedBuffer->bufferSize+sizeof(long))<0) {
+//     if (munmap(sharedBuffer->sharedMemoryBaseAddress, sharedBuffer->buffer_size+sizeof(long))<0) {
 //         handleError("munmap");
 //     }
 //     if (sem_close(sharedBuffer->mutexSemaphore)<0) {

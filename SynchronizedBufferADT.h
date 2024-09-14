@@ -1,10 +1,10 @@
 // typedef struct SynchronizedBufferCDT* SynchronizedSharedBufferADT; 
 
-// SynchronizedSharedBufferADT createSynchronizedSharedBuffer(const restrict char * id, size_t bufferSize);
+// SynchronizedSharedBufferADT createSynchronizedSharedBuffer(const restrict char * id, size_t buffer_size);
 
 // void destroySynchronizedBuffer(SynchronizedSharedBufferADT sharedBuffer);
 
-// SynchronizedSharedBufferADT openSynchronizedSharedBuffer(const restrict char * id, size_t bufferSize);
+// SynchronizedSharedBufferADT openSynchronizedSharedBuffer(const restrict char * id, size_t buffer_size);
 
 // void closeSynchronizedSharedBuffer(SynchronizedSharedBufferADT sharedBuffer);
 

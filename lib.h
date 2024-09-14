@@ -43,9 +43,9 @@
 
 
 typedef struct {
-    int read_fd; 
-    int write_fd; 
     pid_t pid; 
+    int app_to_slave[2];
+    int slave_to_app[2]; 
 } SlaveProcessInfo;
 
 typedef struct {

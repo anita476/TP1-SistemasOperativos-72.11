@@ -22,7 +22,6 @@ int main(int argc, char * argv[]) {
     int num_slaves = calculate_num_slaves(num_files);
 
     FILE * output = fopen(OUTPUT_FILE, "w");
-    
     check_error(output, NULL, "Failed to create output file");
  
     fprintf(output, HEADER);
@@ -33,14 +32,23 @@ int main(int argc, char * argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
 
     // initilize shared memory & semaphore
-    SharedMemoryContext *shm = create_resources(num_files);
+
+    SharedMemoryContext *shm = malloc(sizeof(SlaveProcessInfo));
+    check_error(slaves, NULL, "Failed to allocate memory for shared memory");
+
+    initialize_resources(num_slaves, slaves, shm);
     
     wait_for_view();
 
-    for (int i = 0; i < num_slaves; i++) {
-        create_slave_process(&slaves[i]);
-        check_error(send_file_to_slave(&slaves[i], argv[i + 1]), ERROR, "Failed to send file %s to slave %d", argv[i + 1], slaves[i].pid);
-    }
+    create_slave_processes(num_slaves, slaves);
+    process_files(num_slaves, slaves, argv + 1, num_files, &shm_ctx);
+
+
+
+    // for (int i = 0; i < num_slaves; i++) {
+    //     // create_slave_process(&slaves[i]);
+    //     check_error(send_file_to_slave(&slaves[i], argv[i + 1]), ERROR, "Failed to send file %s to slave %d", argv[i + 1], slaves[i].pid);
+    // }
 
     int next_to_process = num_slaves; 
     int processed = 0; 
@@ -109,31 +117,9 @@ int main(int argc, char * argv[]) {
 }
 
 // FixMe: find a better logic for the number of files sent at once 
-int calculate_num_slaves(int num_files) {
-    int num_slaves;
-
-    // If there are more than 30 files, use 10% of files as children
-    if (num_files > MAX_SLAVES) {
-        num_slaves = num_files / 10;
-    }
-
-    else if (num_files <= MIN_SLAVES) {
-        num_slaves = num_files;
-    }
-
-    else {
-        num_slaves = num_files / 2;
-    }
-
-    return num_slaves;
-
-}
 
 void create_slave_process(SlaveProcessInfo *slave) {
-    int appToSlave[2]; 
-    int slaveToApp[2];
-
-    // Iniciate pipes - check  -1 return -> cant fork :C
+    // Initiate pipes - check  -1 return -> cant fork :C
     if(pipe(appToSlave) < 0 || pipe(slaveToApp) < 0) {
         ERROR_EXIT("Error creating pipes"); 
     }
@@ -228,12 +214,6 @@ int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
 }
 
 
-void wait_for_view() {
-    printf("%s\n", SHM_PATH);
-    fprintf(stderr, "Waiting for view to connect\n");
-    sleep(2);
-    fflush(stdout);
-}
 
 
 // ssize_t poll_ready_slaves(SlaveProcessInfo *slaves, int num_slaves, int *ready_slaves) {

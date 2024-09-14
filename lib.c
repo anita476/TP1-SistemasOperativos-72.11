@@ -1,7 +1,7 @@
 #include "lib.h"
 
-void check_error(int return_value, int check_value, const char *message) {
-    if (return_value == check_value) {
+void check_error(int return_value, const char *message) {
+    if (return_value) {
         perror(message); 
         fprintf(stderr, "Error code: %d\n", errno);
         exit(EXIT_FAILURE);

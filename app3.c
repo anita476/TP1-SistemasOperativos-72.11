@@ -38,8 +38,37 @@ int main(int argc, char * argv[]) {
 
     create_slave_processes(num_slaves, slaves);
 
-    // process files 
+    fd_set read_fd_set, fd_backup_read;
+    FD_ZERO(&read_fd_set);
+    for (int i = 0; i < num_slaves; i++) {
+        FD_SET(slaves[i].slave_to_app[READ_END], &read_fd_set);
+    }
+    fd_backup_read = read_fd_set;
 
+    int next_to_process = num_slaves;
+    int processed = 0;
+    char buffer[MAX_RES_LENGTH];
+
+    // send initial files
+    for (int i = 0; i < num_slaves && i < num_files; i++) {
+        send_file_to_slave(&slaves[i], argv[i + 1]);
+    }
+
+    while (processed < num_files) {
+        read_fd_set = fd_backup_read;
+        check_error(select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL), ERROR, "Failed in select"); 
+
+        for (int i = 0; i < num_slaves && processed < num_files; i++) {
+            if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
+                process_slave_output(i, buffer, sizeof(buffer));
+                processed++;
+                if (next_to_process < num_files) {
+                    send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
+                    next_to_process++;
+                }
+            }
+        }
+    }
 
     cleanup_resources(shm, output, slaves, num_slaves);
     
@@ -113,5 +142,29 @@ void create_slave_processes(num_slaves, slaves) {
             close(slaves[i].app_to_slave[READ_END]);
             close(slaves[i].slave_to_app[WRITE_END]);
         }
+    }
+}
+
+
+void process_slave_output(int slave_index, char *buffer, size_t buffer_size) {
+    SlaveProcessInfo *slave = &slaves[slave_index];
+    ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, buffer_size - 1);
+    if (bytes_read > 0) {
+        buffer[bytes_read] = '\0';
+        fprintf(stderr, "Read from slave %d: %s", slave->pid, buffer);
+
+        // Write to output file
+        check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
+        fflush(output);
+
+        // Write to shared memory
+        sem_wait(shm->sync_semaphore);
+        int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
+        shm->current_position += written;
+        sem_post(shm->sync_semaphore);
+    } else if (bytes_read == 0) {
+        fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
+    } else {
+        fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
     }
 }

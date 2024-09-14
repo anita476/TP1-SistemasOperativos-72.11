@@ -77,10 +77,8 @@ int main() {
 
         if (write(STDOUT_FILENO, output, written) != written) {
             fprintf(stderr, "Slave %d: Error writing to stdout: %s\n", getpid(), strerror(errno));
-        } else {
-            fprintf(stderr, "Slave %d: Successfully wrote result to stdout\n", getpid());
         }
-
+        
         pclose(md5sum);        
     }
 

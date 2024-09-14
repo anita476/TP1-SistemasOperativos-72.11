@@ -35,12 +35,11 @@ int main(int argc, char * argv[]) {
 
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    // initilize shared memory & semaphore
+    // Initilize shared memory & semaphore
 
     SharedMemoryContext *shm = create_resources(num_files);
     
     wait_for_view();
-
 
     for (int i = 0; i < num_slaves; i++) {
         check_error(pipe(slaves[i].app_to_slave) == ERROR, "Failed to pipe"); 
@@ -51,16 +50,18 @@ int main(int argc, char * argv[]) {
 
     fd_set read_fd_set, fd_backup_read;
     FD_ZERO(&read_fd_set);
+
     for (int i = 0; i < num_slaves; i++) {
         FD_SET(slaves[i].slave_to_app[READ_END], &read_fd_set);
     }
+
     fd_backup_read = read_fd_set;
 
     int next_to_process = num_slaves;
     int processed = 0;
     char buffer[MAX_RES_LENGTH];
 
-    // send initial files
+    // Send initial files
     for (int i = 0; i < num_slaves && i < num_files; i++) {
         send_file_to_slave(&slaves[i], argv[i + 1]);
     }
@@ -135,8 +136,6 @@ int calculate_num_slaves(int num_files) {
 
 }
 void wait_for_view() {
-    fprintf(stderr, "Waiting for view to connect\n");
-
     printf("%s\n", SHM_PATH);
     sleep(2);
     fflush(stdout);

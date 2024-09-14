@@ -38,6 +38,9 @@
 #define MIN_FILES_PER_SLAVE 1
 #define AVG_FILES_PER_SLAVE 2
 
+#define NAME_SIZE 10
+
+
 typedef struct {
     int readFd; 
     int writeFd; 
@@ -50,6 +53,9 @@ typedef struct {
     sem_t *semDone;
     size_t bufferSize; 
     int fd; 
+
+    char semName[NAME_SIZE];
+    char semDoneName[NAME_SIZE];
 
     // char buffer[BUFFER_SIZE]; /* to make sure we are defining th page structure correctly */
 

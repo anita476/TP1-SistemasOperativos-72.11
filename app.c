@@ -1,14 +1,19 @@
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-#include "app.h"
 
 #define OUTPUT_FILE "output.txt"
 
+int calculate_num_slaves(int num_files);
+void initialize_resources(int num_slaves, SlaveProcessInfo *slaves, SharedMemoryContext *shm);
+void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves);
+int send_file_to_slave(SlaveProcessInfo *slave, const char *filename);
+void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int num_slaves);
+void wait_for_view();
+
+
+
 int main(int argc, char * argv[]) {
+    
     signal(SIGPIPE,SIG_IGN);
 
     // Check if the amount of arguments is valid
@@ -17,366 +22,187 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE); 
     }
 
-    int numFiles = argc - 1;
-    int filesPerSlave = 0; // no lo vamos a usar al final 
-    int numSlaves = calculate_num_slaves(numFiles, &filesPerSlave);
+    int num_files = argc - 1;
+    int num_slaves = calculate_num_slaves(num_files);
 
     FILE * output = fopen(OUTPUT_FILE, "w");
-    if (output == NULL) {
-        ERROR_EXIT("Error creating output file");
-    }
-    fprintf(output, HEADER);
+    check_error(output == NULL, "Failed to create output file");
+ 
+    check_error(fprintf(output, HEADER) < 0, "Failed to write header to output file");
 
-    // int fd = -1;
-    // sem_t *semaphore = SEM_FAILED;
-    SlaveProcess *slaves = malloc(sizeof(SlaveProcess) * numSlaves);
-    if (slaves == NULL) {
-        ERROR_EXIT("Failed to allocate memory for slaves");
-    }
+    SlaveProcessInfo *slaves = malloc(sizeof(SlaveProcessInfo) * num_slaves);
+    check_error(slaves == NULL, "Failed to allocate memory for slaves");
 
     setvbuf(stdout, NULL, _IONBF, 0);
 
     // initilize shared memory & semaphore
-    SharedMemoryStruct *shmStruct = create_shared_memory_and_semaphore(numFiles);
+
+    SharedMemoryContext *shm = create_resources(num_files);
+    
     wait_for_view();
 
-    
-    // create slaves and communicate
-    for (int i = 0; i < numSlaves; i++) {
-        create_slave_process(&slaves[i]);
-        if (send_file_to_slave(&slaves[i], argv[i + 1]) < 0) {
-                fprintf(stderr, "Error sending file %s to slave %d\n", argv[i + 1], slaves[i].pid);
+
+    for (int i = 0; i < num_slaves; i++) {
+        check_error(pipe(slaves[i].app_to_slave) == ERROR, "Failed to pipe"); 
+        check_error(pipe(slaves[i].slave_to_app) == ERROR, "Failed to pipe"); 
+    }    
+
+    create_slave_processes(num_slaves, slaves);
+
+    fd_set read_fd_set, fd_backup_read;
+    FD_ZERO(&read_fd_set);
+    for (int i = 0; i < num_slaves; i++) {
+        FD_SET(slaves[i].slave_to_app[READ_END], &read_fd_set);
+    }
+    fd_backup_read = read_fd_set;
+
+    int next_to_process = num_slaves;
+    int processed = 0;
+    char buffer[MAX_RES_LENGTH];
+
+    // send initial files
+    for (int i = 0; i < num_slaves && i < num_files; i++) {
+        send_file_to_slave(&slaves[i], argv[i + 1]);
+    }
+
+    while (processed < num_files) {
+        read_fd_set = fd_backup_read;
+        check_error(select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0, "Failed in select"); 
+
+        for (int i = 0; i < num_slaves && processed < num_files; i++) {
+            if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
+                //
+                SlaveProcessInfo *slave = &slaves[i];
+                ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, sizeof(buffer) - 1);
+
+                if (bytes_read > 0) {
+                    buffer[bytes_read] = '\0';
+                    fprintf(stderr, "Read from slave %d: %s", slave->pid, buffer);
+
+                    // Write to output file
+                    check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
+                    fflush(output);
+
+                    sem_wait(shm->sync_semaphore);
+
+                    int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
+                    shm->current_position += written;
+                    sem_post(shm->sync_semaphore); // add error check
+                } else if (bytes_read == 0) {
+                    fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
+                } else {
+                    fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
+                }
+                
+                // 
+                processed++;
+                if (next_to_process < num_files) {
+                    send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
+                    next_to_process++;
+                }
+            }
         }
     }
 
-    distribute_files_to_slaves(slaves, numSlaves, numFiles, argv, shmStruct, output);
+    sem_post(shm->done_semaphore);
 
-    close_all_resources(shmStruct, output, slaves, numSlaves);
-    free(slaves);
+    cleanup_resources(shm, slaves, num_slaves);
+    
+    check_error(fclose(output) != 0, "Failed to close output file"); 
 
     fprintf(stderr, "All done in app!\n");
 
     return 0;
 }
 
-SharedMemoryStruct *create_shared_memory_and_semaphore(int numFiles) {
-    SharedMemoryStruct *shmStruct = malloc(sizeof(SharedMemoryStruct));
+int calculate_num_slaves(int num_files) {
+    int num_slaves;
 
-    // FixMe: consider passing in the path in the function instead of using a constant
-    shm_unlink(SHM_PATH);
-
-    shmStruct->fd = shm_open(SHM_PATH, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
-
-    if (shmStruct->fd == ERROR) {
-        ERROR_EXIT("Error creating shared memory");
+    // If there are more than 30 files, use 10% of files as children
+    if (num_files > MAX_SLAVES) {
+        num_slaves = num_files / 10;
     }
 
-    if (ftruncate(shmStruct->fd, SHM_DEF_SIZE) == ERROR) {
-        ERROR_EXIT("Error truncating shared memory");
+    else if (num_files <= MIN_SLAVES) {
+        num_slaves = num_files;
     }
 
-    shmStruct->shmAddr = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shmStruct->fd, 0);
-    if (shmStruct->shmAddr == MAP_FAILED) {
-        ERROR_EXIT("Error mapping shared memory");
-    }
-
-    shmStruct->bufferSize = numFiles * MAX_RES_LENGTH;
-
-    strncpy(shmStruct->semName, SEM_PATH, NAME_SIZE - 1);
-    shmStruct->semName[NAME_SIZE - 1] = '\0'; 
-
-    strncpy(shmStruct->semDoneName, SEM_DONE_PATH, NAME_SIZE - 1);
-    shmStruct->semDoneName[NAME_SIZE - 1] = '\0'; 
-
-    sem_unlink(shmStruct->semName);
-    shmStruct->sem = sem_open(shmStruct->semName, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
-    if (shmStruct->sem == SEM_FAILED) {
-        ERROR_EXIT("Error creating semaphore");
-    }
-    
-    sem_unlink(shmStruct->semDoneName);
-    shmStruct->semDone = sem_open(shmStruct->semDoneName, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
-    if (shmStruct->semDone == SEM_FAILED) {
-        ERROR_EXIT("Error creating semaphore");
-    }
-
-
-    return shmStruct;
-}
-
-// Returns in slave the pid of the slave, readFd and writeFd
-void create_slave_process(SlaveProcess *slave) {
-    int appToSlave[2]; 
-    int slaveToApp[2];
-
-    // Iniciate pipes - check  -1 return -> cant fork :C
-    if(pipe(appToSlave) < 0 || pipe(slaveToApp) < 0) {
-        ERROR_EXIT("Error creating pipes"); 
-    }
-    // fprintf(stderr,"APP to SLAVE pipe: readEnd: %d, writeEnd: %d\n",appToSlave[0],appToSlave[1]);
-    // fprintf(stderr, "SLAVE to APP pipe: readEnd: %d, writeEnd: %d\n",slaveToApp[0],slaveToApp[1]);
-
-    FILE *app_to_slave_write = fdopen(appToSlave[WRITE_END], "w");
-    FILE *slave_to_app_read = fdopen(slaveToApp[READ_END], "r");
-
-    if (app_to_slave_write == NULL || slave_to_app_read == NULL) {
-        ERROR_EXIT("Error creating FILE streams");
-    }
-
-    // Set pipes to unbuffered mode
-    setvbuf(app_to_slave_write, NULL, _IONBF, 0);
-    setvbuf(slave_to_app_read, NULL, _IONBF, 0);
-    
-    // Fork parent process
-    pid_t pid = fork();
-
-    // Invalid process
-    if(pid < 0) {
-        ERROR_EXIT("Error forking process");
-    }
-    
-    // Child process 
-    if (pid == 0) {
-        // Close child redundant file descriptors 
-        if (close(appToSlave[WRITE_END]) || close(slaveToApp[READ_END]) ) {
-            ERROR_EXIT("Error closing pipe ends");
-        }
-        // fprintf(stderr,"I closed fd: %d and %d in child\n", appToSlave[WRITE_END],slaveToApp[READ_END]);
-
-        // for pipe created "for app" (for reading input data)-> where slave reads, its "stdin" 
-        // for pipe crearted "for slave" (for writing result data) -> where slave writes, its "stdout"
-        if(dup2(appToSlave[READ_END], STDIN_FILENO) < 0 || dup2(slaveToApp[WRITE_END], STDOUT_FILENO) < 0) {
-            ERROR_EXIT("Error duping file descriptors");
-        }
-
-        // // closing unnecessary fd's 
-        // close(appToSlave[READ_END]);
-        // close(slaveToApp[WRITE_END]);
-        // fprintf(stderr,"I closed fd: %d and %d in child\n", appToSlave[READ_END],slaveToApp[WRITE_END]);
-        
-        char *const argv[] = {"./slave", NULL};
-        
-        if(execv("./bin/slave", argv) == ERROR) {
-            ERROR_EXIT("Error executing slave program");
-        }
-    }
-
-    // Parent process
     else {
-        // Close parent redundant file descriptors
-        if (close(appToSlave[READ_END] || close(slaveToApp[WRITE_END]))) {
-            ERROR_EXIT("Error closing pipe ends");
-        }
-        // fprintf(stderr,"I closed fd: %d and %d in parent\n", appToSlave[READ_END],slaveToApp[WRITE_END]);
-
-        slave->readFd = slaveToApp[READ_END];
-        slave->writeFd = appToSlave[WRITE_END];
-        slave->pid = pid; 
+        num_slaves = num_files / 2;
     }
 
-    return;
+    return num_slaves;
+
+}
+void wait_for_view() {
+    fprintf(stderr, "Waiting for view to connect\n");
+
+    printf("%s\n", SHM_PATH);
+    sleep(2);
+    fflush(stdout);
+
 }
 
-// !!! FixMe REVISAR!!!
-// aca no se si hacer que devuelva -1, o que haga un exit directamente desde esta funcion (como lo hicimos para las otras funcioens) -> las funciones modulares no deberían hacer exit mejor
-// better name: write in pipe for slave? 
-int send_file_to_slave(SlaveProcess *slave, const char *filename) {
-    ssize_t bytesWritten = write(slave->writeFd, filename, strlen(filename));
-    // fprintf(stderr, "Writing file %s to slave w pid %d from fd write: %d\n", filename, slave->pid, slave->writeFd);
+// void initialize_resources(int num_slaves, SlaveProcessInfo *slaves, SharedMemoryContext *shm) {
     
-    if (bytesWritten < 0) {
-        ERROR_EXIT("Error writing to slave");
+//     shm = create_resources(num_slaves);
+// }
+
+void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
+    for (int i = 0; i < num_slaves; i++) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            fprintf(stderr, "Fork failed");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            for (int j = 0; j < num_slaves; j++) {
+                if (j != i) {
+                    close(slaves[j].app_to_slave[WRITE_END]);
+                    close(slaves[j].app_to_slave[READ_END]);
+                    close(slaves[j].slave_to_app[WRITE_END]);
+                    close(slaves[j].slave_to_app[READ_END]);
+                }
+            }
+            dup2(slaves[i].app_to_slave[READ_END], STDIN_FILENO);
+            dup2(slaves[i].slave_to_app[WRITE_END], STDOUT_FILENO);
+            close(slaves[i].app_to_slave[READ_END]);
+            close(slaves[i].slave_to_app[WRITE_END]);
+            
+            char *const argv[] = {"./slave", NULL};
+            execv("./bin/slave", argv);
+            fprintf(stderr, "Failed to execute slave program");
+        } else {
+            // Parent process
+            slaves[i].pid = pid;
+            close(slaves[i].app_to_slave[READ_END]);
+            close(slaves[i].slave_to_app[WRITE_END]);
+        }
     }
-    
-    if (write(slave->writeFd, "\n", 1) != 1) {
-        ERROR_EXIT("Error writing to slave");
-    }
+}
+
+
+int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
+    ssize_t bytes_written = write(slave->app_to_slave[WRITE_END], filename, strlen(filename));
+
+    check_error(bytes_written == ERROR, "Failed to write to slave"); 
+    // check_error(write(slave->app_to_slave[WRITE_END], "\n", 1) != 1, "Failed to write to slave");    
+    if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1){
+        perror("Failed to write to slave");
+        exit(EXIT_FAILURE);
+    } 
 
     return 0;
 }
 
-ssize_t wait_for_ready(SlaveProcess *slaves, int numSlaves, int *readySlaves) {
-    fd_set readFdSet;
-    FD_ZERO(&readFdSet);
+void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int num_slaves) {
+    destroy_resources(shm);
 
-    int maxFd = -1;
+    for(int i = 0; i < num_slaves; i++) {
+		close(slaves[i].app_to_slave[WRITE_END]);
+		close(slaves[i].slave_to_app[READ_END]);
+				
+		// kill(slaves[i].pid, SIGKILL); //>> 
+	}
 
-    // Finds the highest fd & add each slave's file descriptor 
-    for (int i = 0; i < numSlaves; i++) {
-        FD_SET(slaves[i].readFd, &readFdSet);
-        if (slaves[i].readFd > maxFd) {
-            maxFd = slaves[i].readFd;
-        }
-    }
-
-    int selectRes; 
-    if ((selectRes = select(maxFd + 1, &readFdSet, NULL, NULL, NULL)) < 0) {
-        ERROR_EXIT("Error selecting ready slaves");
-    }
-
-    int readyCount = 0;
-
-    // checks which slaves are ready and adds them to readySlaves
-    for (int i = 0; i < numSlaves && readyCount < selectRes; i++) {
-        // Checks if the file descriptor is part of the set
-        if (FD_ISSET(slaves[i].readFd, &readFdSet)) {
-            readySlaves[readyCount++] = i;
-        }
-    }
-
-    return readyCount;
-}
-
-
-// FixMe: find a better logic for the number of files sent at once 
-int calculate_num_slaves(int numFiles, int *filesPerSlave) {
-    int numSlaves;
-
-    // If there are more than 30 files, use 10% of files as children
-    if (numFiles > MAX_SLAVES) {
-        numSlaves = numFiles / 10;
-        *filesPerSlave = AVG_FILES_PER_SLAVE;
-    }
-
-    else if (numFiles <= MIN_SLAVES) {
-        numSlaves = numFiles;
-        *filesPerSlave = MIN_FILES_PER_SLAVE;
-    }
-
-    else {
-        numSlaves = numFiles / 2;
-        *filesPerSlave = AVG_FILES_PER_SLAVE; 
-    }
-
-    return numSlaves;
-
-}
-
-void distribute_files_to_slaves(SlaveProcess *slaves, int numSlaves, int numFiles, char *files[], SharedMemoryStruct *shmStruct, FILE * outputFile) {
-    int nextToProcess = numSlaves;
-    int processed = 0;
-    int writtenCount = 0;
-
-    while (processed < numFiles) {
-        int readySlaves[numSlaves];
-        int readyCount = wait_for_ready(slaves, numSlaves, readySlaves);
-
-        for (int i = 0; i < readyCount; i++) {
-            int whichSlave = readySlaves[i];
-            SlaveProcess *slave = &slaves[whichSlave];
-
-            char buffer[MAX_RES_LENGTH];
-            ssize_t bytesRead = read(slave->readFd, buffer, sizeof(buffer) - 1);
-
-            if (bytesRead > 0) {
-                fprintf(stderr, "Bytes read: %ld\n", bytesRead);
-                buffer[bytesRead] = '\0';
-                fprintf(stderr, "Read from slave %d: %s", slave->pid, buffer);
-
-                // Write to output file
-                if (fprintf(outputFile, "%s", buffer) < 0) {
-                    ERROR_EXIT("Error writing to output file");
-                }
-
-                fflush(outputFile);
-                fprintf(stderr, "Waiting on semaphore...\n");
-
-                if (sem_wait(shmStruct->sem) != 0) {
-                    ERROR_EXIT("Error waiting on semaphore");
-                }
-
-                fprintf(stderr, "Semaphore acquired, about to write...\n");
-
-                writtenCount += sprintf(shmStruct->shmAddr + writtenCount, 
-                                            "%s", buffer);
-
-                fprintf(stderr, "Data written to shared memory\n");
-
-                sem_post(shmStruct->sem);
-                fprintf(stderr, "Posted to sem for view to read\n");
-
-                processed++;
-
-                if (nextToProcess < numFiles) {
-                    // no se si debe ser un + 1 o no 
-                    if (send_file_to_slave(slave, files[nextToProcess]) < 0) {
-                        fprintf(stderr, "Error sending file to slave %d\n", slave->pid);
-                        exit(ERROR);
-                    }
-                    nextToProcess++;
-                }
-
-            } 
-            
-            else if (bytesRead == 0) {
-                fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
-            } 
-            
-            else {
-                fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
-            }
-        }
-    }
-
-    // Signal that we're done processing
-    fprintf(stderr, "Done processing, posting to semDone\n");
-    sem_post(shmStruct->semDone);
-
-    fprintf(stderr, "Done posting\n");
-    fprintf(stderr, "Content of shared memory:\n%s\n", shmStruct->shmAddr);
-}
-
-
-void wait_for_view() {
-    printf("%s\n", SHM_PATH);
-    // printf("%s\n", SEM_PATH);
-    // printf("%s\n", SEM_DONE_PATH);
-    fprintf(stderr, "Waiting for view to connect\n");
-    sleep(3);
-
-    fflush(stdout);
-}
-
-void close_all_resources(SharedMemoryStruct *shmStruct, FILE *output, SlaveProcess *slaves, int numSlaves) {
-    // close output file
-    fclose(output);
-
-    if ((sem_close(shmStruct->sem) == ERROR) || (sem_close(shmStruct->semDone) == ERROR)) {
-        ERROR_EXIT("Error closing semaphores\n");
-    }
-    if ((sem_unlink(shmStruct->semName) == ERROR) || (sem_unlink(shmStruct->semDoneName) == ERROR)) {
-        ERROR_EXIT("Error unlinking semaphore\n"); 
-    }
-
-
-    // order is unmap -> close -> unlink
-    if (munmap(shmStruct->shmAddr, SHM_DEF_SIZE) == ERROR) {
-        ERROR_EXIT("Error unmapping shared memory\n");
-    } else {
-        fprintf(stderr, "Shared memory unmapped successfully\n");
-    }
-
-    if (close(shmStruct->fd) == ERROR) {
-        ERROR_EXIT("Error closing shm\n");
-    }
-
-    if (shm_unlink(SHM_PATH) == ERROR) {
-        ERROR_EXIT("Error unlinking shm\n");
-    } // considero que esto esta mal, y habria que pasarle el nombre como param de la funcion
-
-
-    
-    fprintf(stderr, "Before closing pipes\n");
-    sleep(2);
-
-
-    for (int i = 0; i < numSlaves; i++) {
-        fprintf(stderr, "Closing pipes for slave %d (readFd: %d, writeFd: %d)\n", 
-                slaves[i].pid, slaves[i].readFd, slaves[i].writeFd);
-        close(slaves[i].readFd);
-        close(slaves[i].writeFd);
-    }
-
-    // Free shared memory structure
-    free(shmStruct);
+    free(slaves);
 }

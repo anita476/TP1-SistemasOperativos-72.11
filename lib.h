@@ -16,10 +16,9 @@
 #define READ_END 0 
 #define WRITE_END 1
 
-
 //based on Linux system standard
 // maximum of hash is 128 bits
-#define MAX_BUFFER_LENGTH 1024
+// #define MAX_BUFFER_LENGTH 1024
 
 #define MAX_MD5_LENGTH 32
 #define MAX_PID_LENGTH 20
@@ -28,8 +27,8 @@
 #define MAX_RES_LENGTH (MAX_FILEPATH_LENGTH + MAX_MD5_LENGTH + MAX_PID_LENGTH)
 
 #define SHM_PATH "/shm"
-#define SEM_PATH "/sem"
-#define SEM_DONE_PATH "/semDone"
+#define SEM_SYNC_PATH "/sync_semaphore"
+#define SEM_DONE_PATH "/done_semaphore"
 
 #define SHM_DEF_SIZE 0x40000
 
@@ -40,27 +39,32 @@
 
 #define NAME_SIZE 10
 
-
-typedef struct {
-    int readFd; 
-    int writeFd; 
-    pid_t pid; 
-} SlaveProcess;
-
-typedef struct {
-    char *shmAddr; 
-    sem_t *sem; 
-    sem_t *semDone;
-    size_t bufferSize; 
-    int fd; 
-
-    char semName[NAME_SIZE];
-    char semDoneName[NAME_SIZE];
-
-    // char buffer[BUFFER_SIZE]; /* to make sure we are defining th page structure correctly */
-
-} SharedMemoryStruct;
-
-#define ERROR_EXIT(msg) do {perror(msg); exit(EXIT_FAILURE); } while (0)
-
 #define HEADER "PID\t\t\tFILE\t\t\t\tHASH\n"
+
+
+typedef struct {
+    pid_t pid; 
+    int app_to_slave[2];
+    int slave_to_app[2]; 
+} SlaveProcessInfo;
+
+typedef struct {
+    char *shm_addr; 
+    sem_t *sync_semaphore; 
+    sem_t *done_semaphore;
+    size_t buffer_size; 
+    int shm_fd; 
+
+    int current_position;
+
+    char sync_sem_name[NAME_SIZE];
+    char done_sem_name[NAME_SIZE];
+
+} SharedMemoryContext;
+
+
+void check_error(int return_value, const char *message);
+SharedMemoryContext *create_resources(int num_files);
+void close_resources(SharedMemoryContext *shm);
+void destroy_resources(SharedMemoryContext *shm);
+SharedMemoryContext *open_resources(const char *shm_path);

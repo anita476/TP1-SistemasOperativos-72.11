@@ -16,13 +16,13 @@ pre-build:
 lib.o: lib.c lib.h
 	$(CC) -c $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
-md5: app.c lib.o
+md5: app.c bin/lib.o
 	$(CC) $^ $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
-slave: slave.c lib.o
+slave: slave.c bin/lib.o
 	$(CC) $^ $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
-view: view.c lib.o
+view: view.c bin/lib.o
 	$(CC) $^ $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
 clean:

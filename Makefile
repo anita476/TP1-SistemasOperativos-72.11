@@ -5,7 +5,7 @@ SANITIZE_FLAGS = -fsanitize=address,undefined -g -fno-omit-frame-pointer
 
 OUT_DIR = bin
 
-all: pre-build md5 slave view
+all: pre-build lib.o md5 slave view
 
 sanitize: CFLAGS += $(SANITIZE_FLAGS)
 sanitize: all

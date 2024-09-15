@@ -35,7 +35,6 @@ int main(int argc, char * argv[]) {
     setvbuf(stdout, NULL, _IONBF, 0);
 
     // Initilize shared memory & semaphore
-
     SharedMemoryContext *shm = create_resources(num_files);
     
     wait_for_view();
@@ -77,9 +76,8 @@ int main(int argc, char * argv[]) {
 
                 if (bytes_read > 0) {
                     buffer[bytes_read] = '\0';
-                    fprintf(stderr, "%s", buf   fer);
+                    fprintf(stderr, "%s", buffer);
 
-                    // Write to output file
                     check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
                     fflush(output);
 
@@ -112,8 +110,6 @@ int main(int argc, char * argv[]) {
     cleanup_resources(shm, slaves, num_slaves);
     
     check_error(fclose(output) != 0, "Failed to close output file"); 
-
-    fprintf(stderr, "All done in app!\n");
 
     return 0;
 }
@@ -152,7 +148,7 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
             exit(EXIT_FAILURE);
         } 
         
-        lse if (pid == 0) {
+        else if (pid == 0) {
             for (int j = 0; j < num_slaves; j++) {
                 if (j != i) {
                     close(slaves[j].app_to_slave[WRITE_END]);
@@ -186,8 +182,8 @@ int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
     ssize_t bytes_written = write(slave->app_to_slave[WRITE_END], filename, strlen(filename));
 
     check_error(bytes_written == ERROR, "Failed to write to slave"); 
-    // check_error(write(slave->app_to_slave[WRITE_END], "\n", 1) != 1, "Failed to write to slave");    
-    if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1){
+    
+    if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1) {
         perror("Failed to write to slave");
         exit(EXIT_FAILURE);
     } 

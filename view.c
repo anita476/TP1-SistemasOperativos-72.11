@@ -25,13 +25,11 @@ int main(int argc, char *argv[]) {
     SharedMemoryContext *shm_data = open_resources(shm_path);
     check_error(shm_data == NULL, "Failed to allocate memory for shared memory in view");
  
-    printf(HEADER); // FixMe: writing header twice?? why is it also in app.c 
+    printf(HEADER);
     fflush(stdout);
 
     char buffer[MAX_RES_LENGTH];
     size_t read_position = 0;
-
-    // sem_wait(shm_data->done_semaphore);
 
     while (1) {
         if (sem_wait(shm_data->sync_semaphore) != 0) {
@@ -55,17 +53,12 @@ int main(int argc, char *argv[]) {
         sem_post(shm_data->sync_semaphore);
 
         if (sem_trywait(shm_data->done_semaphore) == 0) {
-            fprintf(stderr, "Processing complete. Exiting...\n");
             break;
         }
     }
 
-    fprintf(stderr, "View process: All data read, exiting.\n");
-
     close_resources(shm_data);
     free(shm_data);
-
-    fprintf(stderr, "All done in view!\n");
 
     return 0;
 }

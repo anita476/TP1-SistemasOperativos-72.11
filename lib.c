@@ -31,7 +31,6 @@ SharedMemoryContext *create_resources(int num_files) {
     shm->buffer_size = num_files * MAX_RES_LENGTH;
     shm->current_position = 0;
 
-    // idk if this should be here
     strncpy(shm->sync_sem_name, SEM_SYNC_PATH, NAME_SIZE - 1);
     shm->sync_sem_name[NAME_SIZE - 1] = '\0'; 
 
@@ -47,13 +46,11 @@ SharedMemoryContext *create_resources(int num_files) {
     return shm;
 }
 
-// no se si deberia pasarle el sem_syn_path o directamente ponerlo yo usando los valores DEFINIDOS 
 SharedMemoryContext *open_resources(const char *shm_path) {
 
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
     
-    // do we use buffer size? 
     shm_data->shm_fd = shm_open(SHM_PATH, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");
 

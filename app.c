@@ -75,27 +75,22 @@ int main(int argc, char * argv[]) {
 
                 if (bytes_read > 0) {
                     buffer[bytes_read] = '\0';
-                    fprintf(stderr, "Read from slave %d: %s", slave->pid, buffer);
 
-                    // Write to output file
                     check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
                     fflush(output);
 
-                    // sem_wait(shm->sync_semaphore);
+                    // add error chcks on semaphores
+                    sem_wait(shm->sync_semaphore);
                     written += sprintf(shm->shm_addr + written, "%s", buffer);
-                    // shm->current_position += written;
+                    sem_post(shm->sync_semaphore);
+                    sem_post(shm->done_semaphore);
 
-                    // fprintf(stderr, "Current pos from app: %d\n\n", shm->current_position);
-
-                    sem_post(shm->sync_semaphore); // add error check
-
-                } else if (bytes_read == 0) {
-                    fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
+                // } else if (bytes_read == 0) {
+                //     fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
                 } else {
                     fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
                 }
-                
-                // 
+
                 processed++;
                 if (next_to_process < num_files) {
                     send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
@@ -105,7 +100,7 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    sem_wait(shm->done_semaphore);  
+    sem_post(shm->done_semaphore);
 
     cleanup_resources(shm, slaves, num_slaves);
     
@@ -128,7 +123,7 @@ int calculate_num_slaves(int num_files) {
         num_slaves = num_files;
     }
 
-    else {
+    else { // between min and max 
         num_slaves = num_files / 2;
     }
 

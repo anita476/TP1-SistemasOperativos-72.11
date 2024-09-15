@@ -26,21 +26,11 @@ SharedMemoryContext *create_resources(int num_files) {
     check_error(shm->shm_addr == MAP_FAILED, "Failed to map shared memory");
 
     shm->buffer_size = num_files * MAX_RES_LENGTH;
-    shm->current_position = 0;
-
-
-    // idk if this should be here
-    strncpy(shm->sync_sem_name, SEM_SYNC_PATH, NAME_SIZE - 1);
-    shm->sync_sem_name[NAME_SIZE - 1] = '\0'; 
-
-    strncpy(shm->done_sem_name, SEM_DONE_PATH, NAME_SIZE - 1);
-    shm->done_sem_name[NAME_SIZE - 1] = '\0'; 
-
-    // initialized to 1
-    shm->sync_semaphore = sem_open(SEM_SYNC_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
+    
+    shm->sync_semaphore = sem_open(SEM_SYNC_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
     check_error(shm->sync_semaphore == SEM_FAILED, "Failed to create sync semaphore");
 
-    shm->done_semaphore = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
+    shm->done_semaphore = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
     check_error(shm->done_semaphore == SEM_FAILED, "Failed to create done semaphore");
 
     return shm;

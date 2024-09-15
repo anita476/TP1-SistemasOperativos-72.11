@@ -19,7 +19,7 @@
 #define MAX_MD5_LENGTH 32
 #define MAX_PID_LENGTH 20
 #define MAX_FILEPATH_LENGTH 4096
-#define EXTRA_CHARS 4 // two spaces and a newline and one more just in case 
+#define EXTRA_CHARS 4 // Two spaces and a newline and one more just in case 
 #define MAX_RES_LENGTH (MAX_FILEPATH_LENGTH + MAX_MD5_LENGTH + MAX_PID_LENGTH)
 
 #define SHM_PATH "/shm"

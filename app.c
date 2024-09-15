@@ -85,7 +85,7 @@ int main(int argc, char * argv[]) {
 
                     int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
                     shm->current_position += written;
-                    sem_post(shm->sync_semaphore); // add error check
+                    sem_post(shm->sync_semaphore);
                 } 
                 
                 else if (bytes_read == 0) {

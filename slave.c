@@ -48,7 +48,6 @@ int main() {
             continue;
         }
 
-        // Remove newline from result if present
         result[strcspn(result, "\n")] = 0;
 
         char output[MAX_RES_LENGTH];

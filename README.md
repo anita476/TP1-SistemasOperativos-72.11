@@ -26,7 +26,7 @@ Cosas a desarrollar:
 Cosas a desarrollar:
 -> si decido abortar la ejecución, la shared memory no se libera
 -> adicionalmente, si decido abortar la ejecución de app y no de view, entonces view queda "colgada " y tiene que abortarse. 
--> Si bien esto es una limitación, se consideró que es acorde al comportamiento esperado de la relación app - view 
+-> Si bien esto es una limitación -> para solucionarlo deberíamos o elaborar un sig handler (y consecuentemente establecer una forma de que app conozca el pid de view, lo cual vuelve una relación "bilateral" a la rel consumer producer de app y view), o establecer transmitir la información mediante la shared memory u otro pipe (named). Se considera que ambas se escapan de lo solicitado por el enunciado, por lo que se decidió no implementarlas.
 -> alguna más ?
 
 ## Problemas encontrados durante el desarrollo 

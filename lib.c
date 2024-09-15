@@ -46,24 +46,20 @@ SharedMemoryContext *open_resources(const char *shm_path) {
 
     shm_data->shm_fd = shm_open(shm_path, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");
-    fprintf(stderr, "shm_data fd: %d\n", shm_data->shm_fd);
 
     shm_data->shm_addr = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shm_data->shm_fd, 0);
     check_error(shm_data->shm_addr == MAP_FAILED, "Failed to map shared memory in view\n");
-    fprintf(stderr, "shm_data mapped at address: %p\n", shm_data->shm_addr);
 
 
     shm_data->sync_semaphore = sem_open(SEM_SYNC_PATH, 0);
     check_error(shm_data->sync_semaphore == SEM_FAILED, "Failed to open sync semaphore in view");
     int sem_value;
     sem_getvalue(shm_data->sync_semaphore, &sem_value);
-    fprintf(stderr, "Semaphore sync value: %d\n", sem_value);
 
 
     shm_data->done_semaphore = sem_open(SEM_DONE_PATH, 0);
     check_error(shm_data->done_semaphore == SEM_FAILED, "Failed to open done sempahore in view");
      sem_getvalue(shm_data->sync_semaphore, &sem_value);
-    fprintf(stderr, "Semaphore done value: %d\n", sem_value);
 
     return shm_data;
 }

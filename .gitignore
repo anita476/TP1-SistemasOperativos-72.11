@@ -16,3 +16,4 @@ massif.*
 callgrind.*
 strace.log
 ./PVS-*
+lib.o

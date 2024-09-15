@@ -5,7 +5,7 @@ SANITIZE_FLAGS = -fsanitize=address,undefined -g -fno-omit-frame-pointer
 
 OUT_DIR = bin
 
-all: pre-build app slave view
+all: pre-build md5 slave view
 
 sanitize: CFLAGS += $(SANITIZE_FLAGS)
 sanitize: all
@@ -16,7 +16,7 @@ pre-build:
 lib.o: lib.c lib.h
 	$(CC) -c $< $(ALL_CFLAGS) -o $@
 
-app: app.c lib.o
+md5: app.c lib.o
 	$(CC) $^ $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
 slave: slave.c lib.o

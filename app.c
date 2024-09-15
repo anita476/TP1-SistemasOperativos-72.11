@@ -122,19 +122,19 @@ int main(int argc, char * argv[]) {
 int calculate_num_slaves(int num_files) {
     int num_slaves;
 
-    // If there are more than 30 files, use 10% of files as children
+    // If there are more than 20 files, use 20% of numfiles as children
     if (num_files > MAX_SLAVES) {
-        num_slaves = num_files / 10;
+        num_slaves = num_files / 5;
+
     }
 
     else if (num_files <= MIN_SLAVES) {
         num_slaves = num_files;
     }
 
-    else { // between min and max 
+    else { // between min and max use 50% of numfiles as children
         num_slaves = num_files / 2;
     }
-
     return num_slaves;
 }
 
@@ -188,10 +188,10 @@ int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
 
     check_error(bytes_written == ERROR, "Failed to write to slave"); 
     
-    if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1) {
+      if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1) {
         perror("Failed to write to slave");
         exit(EXIT_FAILURE);
-    } 
+    }   
 
     return 0;
 }

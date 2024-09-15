@@ -102,4 +102,4 @@ Para pensar el esqueleto de sincronización entre `app` y `view` se utilizó el 
 		imprimir_resultado_en_stdout(...);
 	}
     }
-Para la incorporación de los dos semáforos también se utilizó como base el adt de memoria compartida visto en la clase práctica.
+Para la incorporación de los dos semáforos se utilizó como base el ADT de memoria compartida visto en la clase práctica. A su vez, para la sincronización de los semáforos, también se tomo el esqueleto mencionado en la clase práctica. 

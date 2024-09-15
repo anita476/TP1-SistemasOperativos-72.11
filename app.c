@@ -90,9 +90,9 @@ int main(int argc, char * argv[]) {
 
                     // add error chcks on semaphores
                     sem_wait(shm->sync_semaphore);
-
                     written += sprintf(shm->shm_addr + written, "%s", buffer);
                     sem_post(shm->sync_semaphore);
+                    sem_post(shm->done_semaphore);
                 } 
                 
                 else if (bytes_read == 0) {

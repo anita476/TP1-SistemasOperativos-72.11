@@ -44,13 +44,13 @@ SharedMemoryContext *open_resources(const char *shm_path) {
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
 
-    shm_data->shm_fd = shm_open(SHM_PATH, O_RDONLY, S_IRUSR | S_IWUSR);
+    shm_data->shm_fd = shm_open(shm_path, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");
     fprintf(stderr, "shm_data fd: %d\n", shm_data->shm_fd);
 
     shm_data->shm_addr = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shm_data->shm_fd, 0);
     check_error(shm_data->shm_addr == MAP_FAILED, "Failed to map shared memory in view\n");
-    fprintf(stderr, "shm_data mapped at address: %s\n", shm_data->shm_addr);
+    fprintf(stderr, "shm_data mapped at address: %p\n", shm_data->shm_addr);
 
 
     shm_data->sync_semaphore = sem_open(SEM_SYNC_PATH, 0);

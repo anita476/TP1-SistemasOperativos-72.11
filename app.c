@@ -91,22 +91,12 @@ int main(int argc, char * argv[]) {
                     // add error chcks on semaphores
                     sem_wait(shm->sync_semaphore);
 
-                    int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
-                    shm->current_position += written;
+                    written += sprintf(shm->shm_addr + written, "%s", buffer);
                     sem_post(shm->sync_semaphore);
                 } 
                 
                 else if (bytes_read == 0) {
                     fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
-                } 
-                
-                else {
-                    written += sprintf(shm->shm_addr + written, "%s", buffer);
-                    sem_post(shm->sync_semaphore);
-                    sem_post(shm->done_semaphore);
-
-                // } else if (bytes_read == 0) {
-                //     fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
                 } else {
                     fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
                 }

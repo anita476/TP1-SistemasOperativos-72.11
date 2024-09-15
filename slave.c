@@ -1,7 +1,5 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
 #include <ctype.h>
@@ -78,7 +76,7 @@ int main() {
         if (write(STDOUT_FILENO, output, written) != written) {
             fprintf(stderr, "Slave %d: Error writing to stdout: %s\n", getpid(), strerror(errno));
         }
-        
+
         pclose(md5sum);        
     }
 

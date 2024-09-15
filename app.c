@@ -1,22 +1,21 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 
 #include "lib.h"
 
 #define OUTPUT_FILE "output.txt"
 
-int calculate_num_slaves(int num_files);
 void initialize_resources(int num_slaves, SlaveProcessInfo *slaves, SharedMemoryContext *shm);
+void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int num_slaves);
 void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves);
 int send_file_to_slave(SlaveProcessInfo *slave, const char *filename);
-void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int num_slaves);
+int calculate_num_slaves(int num_files);
 void wait_for_view();
-
-
 
 int main(int argc, char * argv[]) {
     
-    signal(SIGPIPE,SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
 
-    // Check if the amount of arguments is valid
     if(argc < 2) {
         fprintf(stderr, "Usage: %s <file1> <file2>...\n", argv[0]);
         exit(EXIT_FAILURE); 
@@ -72,13 +71,13 @@ int main(int argc, char * argv[]) {
 
         for (int i = 0; i < num_slaves && processed < num_files; i++) {
             if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
-                //
+                
                 SlaveProcessInfo *slave = &slaves[i];
                 ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, sizeof(buffer) - 1);
 
                 if (bytes_read > 0) {
                     buffer[bytes_read] = '\0';
-                    fprintf(stderr, "Read from slave %d: %s", slave->pid, buffer);
+                    fprintf(stderr, "%s", buf   fer);
 
                     // Write to output file
                     check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
@@ -89,13 +88,16 @@ int main(int argc, char * argv[]) {
                     int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
                     shm->current_position += written;
                     sem_post(shm->sync_semaphore); // add error check
-                } else if (bytes_read == 0) {
+                } 
+                
+                else if (bytes_read == 0) {
                     fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
-                } else {
+                } 
+                
+                else {
                     fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
                 }
                 
-                // 
                 processed++;
                 if (next_to_process < num_files) {
                     send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
@@ -133,27 +135,24 @@ int calculate_num_slaves(int num_files) {
     }
 
     return num_slaves;
-
 }
+
 void wait_for_view() {
     printf("%s\n", SHM_PATH);
     sleep(2);
     fflush(stdout);
-
 }
-
-// void initialize_resources(int num_slaves, SlaveProcessInfo *slaves, SharedMemoryContext *shm) {
-    
-//     shm = create_resources(num_slaves);
-// }
 
 void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
     for (int i = 0; i < num_slaves; i++) {
         pid_t pid = fork();
+        
         if (pid < 0) {
             fprintf(stderr, "Fork failed");
             exit(EXIT_FAILURE);
-        } else if (pid == 0) {
+        } 
+        
+        lse if (pid == 0) {
             for (int j = 0; j < num_slaves; j++) {
                 if (j != i) {
                     close(slaves[j].app_to_slave[WRITE_END]);
@@ -162,6 +161,7 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
                     close(slaves[j].slave_to_app[READ_END]);
                 }
             }
+
             dup2(slaves[i].app_to_slave[READ_END], STDIN_FILENO);
             dup2(slaves[i].slave_to_app[WRITE_END], STDOUT_FILENO);
             close(slaves[i].app_to_slave[READ_END]);
@@ -170,7 +170,9 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
             char *const argv[] = {"./slave", NULL};
             execv("./bin/slave", argv);
             fprintf(stderr, "Failed to execute slave program");
-        } else {
+        } 
+        
+        else {
             // Parent process
             slaves[i].pid = pid;
             close(slaves[i].app_to_slave[READ_END]);
@@ -199,8 +201,6 @@ void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int n
     for(int i = 0; i < num_slaves; i++) {
 		close(slaves[i].app_to_slave[WRITE_END]);
 		close(slaves[i].slave_to_app[READ_END]);
-				
-		// kill(slaves[i].pid, SIGKILL); //>> 
 	}
 
     free(slaves);

@@ -1,10 +1,7 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-// This is a personal academic project. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++ and C#: http:\/\/www.viva64.com
 
 #include "lib.h"
-
 
 int main(int argc, char *argv[]) {
     // Initializing to avoid PVS warning    
@@ -41,17 +38,6 @@ int main(int argc, char *argv[]) {
             perror("Failed to wait on sync semaphore");
             break;
         }
-
-        // If we hit a null character, there is no more data to read, so exit
-        // if (shm_data->shm_addr[read_position] == '\0') {
-        //     fprintf(stderr, "No more data to read. Exiting...\n");
-        //     break;
-        // }
-
-        // size_t len = 0;
-        // while (shm_data->shm_addr[read_idx + len] != '\n') {
-        //     len++;
-        // }
 
         while (read_position < shm_data->current_position) {
             size_t remaining = shm_data->current_position - read_position;

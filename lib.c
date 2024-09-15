@@ -1,3 +1,6 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 #include "lib.h"
 
 void check_error(int condition, const char *message) {
@@ -12,7 +15,7 @@ SharedMemoryContext *create_resources(int num_files) {
     SharedMemoryContext *shm = malloc(sizeof(SharedMemoryContext));
     check_error(shm == NULL, "Failed to allocate memory for shared memory");
 
-    // preventive unlinks 
+    // Preventive unlinks 
     shm_unlink(SHM_PATH);
     sem_unlink(SEM_SYNC_PATH);
     sem_unlink(SEM_DONE_PATH);
@@ -27,7 +30,6 @@ SharedMemoryContext *create_resources(int num_files) {
 
     shm->buffer_size = num_files * MAX_RES_LENGTH;
     shm->current_position = 0;
-
 
     // idk if this should be here
     strncpy(shm->sync_sem_name, SEM_SYNC_PATH, NAME_SIZE - 1);
@@ -50,6 +52,7 @@ SharedMemoryContext *open_resources(const char *shm_path) {
 
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
+    
     // do we use buffer size? 
     shm_data->shm_fd = shm_open(SHM_PATH, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");

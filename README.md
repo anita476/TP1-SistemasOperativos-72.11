@@ -36,17 +36,17 @@ Hay tres maneras de correr el programa:
 
 **Caso 1**: Cálculo de los hash sin la posibilidad de ver los resultados durante el procesamiento.
 
-    ./md5 <archivos>
+    ./bin/md5 <archivos>
 
 **Caso 2**: Cálculo de los hash con la posibilidad de ver los resultados durante el procesamiento.
 
-    ./md5 <archivos> | ./view
+    ./bin/md5 <archivos> | ./view
 
 **Caso 3**: En dos terminales separadas, lo cual equivale al caso anterior.
 
-    ./md5 <archivvos>
+    ./bin/md5 <archivvos>
 
-    ./view <ar>
+    ./bin/view <ar>
     
 ## Decisiones de Desarrollo
 

@@ -40,7 +40,7 @@ Hay tres maneras de correr el programa:
 
     ./md5 <archivos> | ./view
 
-**Caso 3**: En dos terminales separadas, lo cual a fines prácticos, equivale al caso anterior.
+**Caso 3**: En dos terminales separadas, lo cual equivale al caso anterior.
 
     ./md5 <archivvos>
 

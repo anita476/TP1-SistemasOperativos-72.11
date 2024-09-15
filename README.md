@@ -75,7 +75,7 @@ Para la utilización del buffer compartido se decidió que, de no poder leer de 
 
 En un principio, este problema se intentó solucionar proporcionandole una estructura a la shared memory, creando una variable "shmDone" que permitiera a `view` saber cuando debía salir del loop. Problema: al no ser atómica la asignación de la variable, se producía una race condition en la conexión, donde "once in a blue moon", `view` continuaba bloqueandose.
 
-Finalmente se decidió utilizar la implementación de dos semáforos, uno con el objetivo previamente explicado, y otro con el propósito de indicar que el buffer está lleno para permitir a `view` leer del mismo. Luego, para poder salir del loop, se verificó que ya no hubiera más caracteres a leer preguntando si en el índice de lectura se encontraba un `null`. 
+Finalmente se decidió utilizar la implementación de dos semáforos, uno con el objetivo previamente explicado, y otro con el propósito de indicar que el buffer está lleno para permitir a `view` leer del mismo. Luego, para poder salir del loop, se verificó que ya no hubiera más caracteres a leer preguntando si en el índice de lectura (de `view`) se encontraba un `null`. 
 
 Otro problema importante encontrado durante el desarrollo fue el cierre de los `file descriptors` de los `pipes`. Para solucionar este problema se .... @clee // completar
 

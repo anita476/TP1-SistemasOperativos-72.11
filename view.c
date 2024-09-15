@@ -11,7 +11,6 @@ int main(int argc, char *argv[]) {
         strncpy(shm_path, argv[1], sizeof(shm_path) - 1);
     } 
     
-    // Case: pipe
     else if (argc == 1) {
         // %9s to avoid PVS warning
         check_error(scanf("%9s", shm_path) < 0, "Failed to read shm_path");

@@ -25,7 +25,7 @@ SharedMemoryContext *create_resources(int num_files) {
 
     check_error(ftruncate(shm->shm_fd, SHM_DEF_SIZE) == ERROR, "Failed to truncate shared memory");
 
-    shm->shm_addr = mmap(NULL,SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm->shm_fd, 0);
+    shm->shm_addr = mmap(NULL, SHM_DEF_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm->shm_fd, 0);
     check_error(shm->shm_addr == MAP_FAILED, "Failed to map shared memory");
 
     shm->buffer_size = num_files * MAX_RES_LENGTH;

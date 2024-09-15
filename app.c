@@ -24,12 +24,15 @@ int main(int argc, char * argv[]) {
     int num_files = argc - 1;
     int num_slaves = calculate_num_slaves(num_files);
 
+    // PVS warns about "output" being null, but it is already handled
     FILE * output = fopen(OUTPUT_FILE, "w");
     check_error(output == NULL, "Failed to create output file");
  
     check_error(fprintf(output, HEADER) < 0, "Failed to write header to output file");
 
     SlaveProcessInfo *slaves = malloc(sizeof(SlaveProcessInfo) * num_slaves);
+
+    // PVS warns about "slaves" being null, but it is already handled
     check_error(slaves == NULL, "Failed to allocate memory for slaves");
 
     setvbuf(stdout, NULL, _IONBF, 0);

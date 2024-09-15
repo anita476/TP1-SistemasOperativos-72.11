@@ -16,14 +16,10 @@
 #define READ_END 0 
 #define WRITE_END 1
 
-//based on Linux system standard
-// maximum of hash is 128 bits
-// #define MAX_BUFFER_LENGTH 1024
-
 #define MAX_MD5_LENGTH 32
 #define MAX_PID_LENGTH 20
 #define MAX_FILEPATH_LENGTH 4096
-#define EXTRA_CHARS 4 // two spaces and a newline and one more just in case 
+#define EXTRA_CHARS 4 // Two spaces and a newline and one more just in case 
 #define MAX_RES_LENGTH (MAX_FILEPATH_LENGTH + MAX_MD5_LENGTH + MAX_PID_LENGTH)
 
 #define SHM_PATH "/shm"
@@ -39,8 +35,7 @@
 
 #define NAME_SIZE 10
 
-#define HEADER "PID\t\t\tFILE\t\t\t\tHASH\n"
-
+#define HEADER "PID\tFILE\t\t\tHASH\n"
 
 typedef struct {
     pid_t pid; 
@@ -56,9 +51,8 @@ typedef struct {
     int shm_fd; 
 } SharedMemoryContext;
 
-
+SharedMemoryContext *open_resources(const char *shm_path);
 void check_error(int return_value, const char *message);
 SharedMemoryContext *create_resources(int num_files);
 void close_resources(SharedMemoryContext *shm);
 void destroy_resources(SharedMemoryContext *shm);
-SharedMemoryContext *open_resources(const char *shm_path);

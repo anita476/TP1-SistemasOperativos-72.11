@@ -12,8 +12,10 @@ int send_file_to_slave(SlaveProcessInfo *slave, const char *filename);
 int calculate_num_slaves(int num_files);
 void wait_for_view();
 
+
 int main(int argc, char * argv[]) {
     
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
 
     if(argc < 2) {
@@ -37,11 +39,12 @@ int main(int argc, char * argv[]) {
 
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    // Initilize shared memory & semaphore
+    // Initialize shared memory & semaphore
     SharedMemoryContext *shm = create_resources(num_files);
     
     wait_for_view();
 
+    // Initialize slaves
     for (int i = 0; i < num_slaves; i++) {
         check_error(pipe(slaves[i].app_to_slave) == ERROR, "Failed to pipe"); 
         check_error(pipe(slaves[i].slave_to_app) == ERROR, "Failed to pipe"); 
@@ -61,7 +64,9 @@ int main(int argc, char * argv[]) {
     int next_to_process = num_slaves;
     int processed = 0;
     char buffer[MAX_RES_LENGTH];
+    int written = 0;
 
+    // Send initial files
     // Send initial files
     for (int i = 0; i < num_slaves && i < num_files; i++) {
         send_file_to_slave(&slaves[i], argv[i + 1]);
@@ -73,32 +78,29 @@ int main(int argc, char * argv[]) {
 
         for (int i = 0; i < num_slaves && processed < num_files; i++) {
             if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
-                
+
                 SlaveProcessInfo *slave = &slaves[i];
                 ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, sizeof(buffer) - 1);
 
                 if (bytes_read > 0) {
                     buffer[bytes_read] = '\0';
-                    fprintf(stderr, "%s", buffer);
 
                     check_error(fprintf(output, "%s", buffer) < 0, "Failed to write to output file");
                     fflush(output);
 
+                    // add error chcks on semaphores
                     sem_wait(shm->sync_semaphore);
-
-                    int written = sprintf(shm->shm_addr + shm->current_position, "%s", buffer);
-                    shm->current_position += written;
+                    written += sprintf(shm->shm_addr + written, "%s", buffer);
                     sem_post(shm->sync_semaphore);
+                    sem_post(shm->done_semaphore);
                 } 
                 
                 else if (bytes_read == 0) {
                     fprintf(stderr, "Slave %d has closed its pipe\n", slave->pid);
-                } 
-                
-                else {
+                } else {
                     fprintf(stderr, "Error reading from slave %d: %s\n", slave->pid, strerror(errno));
                 }
-                
+
                 processed++;
                 if (next_to_process < num_files) {
                     send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
@@ -120,19 +122,19 @@ int main(int argc, char * argv[]) {
 int calculate_num_slaves(int num_files) {
     int num_slaves;
 
-    // If there are more than 30 files, use 10% of files as children
+    // If there are more than 20 files, use 20% of numfiles as children
     if (num_files > MAX_SLAVES) {
-        num_slaves = num_files / 10;
+        num_slaves = num_files / 5;
+
     }
 
     else if (num_files <= MIN_SLAVES) {
         num_slaves = num_files;
     }
 
-    else {
+    else { // between min and max use 50% of numfiles as children
         num_slaves = num_files / 2;
     }
-
     return num_slaves;
 }
 
@@ -185,10 +187,10 @@ int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
 
     check_error(bytes_written == ERROR, "Failed to write to slave"); 
     
-    if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1) {
+      if (write(slave->app_to_slave[WRITE_END], "\n", 1) != 1) {
         perror("Failed to write to slave");
         exit(EXIT_FAILURE);
-    } 
+    }   
 
     return 0;
 }

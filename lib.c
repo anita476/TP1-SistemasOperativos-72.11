@@ -29,14 +29,7 @@ SharedMemoryContext *create_resources(int num_files) {
     check_error(shm->shm_addr == MAP_FAILED, "Failed to map shared memory");
 
     shm->buffer_size = num_files * MAX_RES_LENGTH;
-    shm->current_position = 0;
-
-    strncpy(shm->sync_sem_name, SEM_SYNC_PATH, NAME_SIZE - 1);
-    shm->sync_sem_name[NAME_SIZE - 1] = '\0'; 
-
-    strncpy(shm->done_sem_name, SEM_DONE_PATH, NAME_SIZE - 1);
-    shm->done_sem_name[NAME_SIZE - 1] = '\0'; 
-
+    
     shm->sync_semaphore = sem_open(SEM_SYNC_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
     check_error(shm->sync_semaphore == SEM_FAILED, "Failed to create sync semaphore");
 
@@ -50,18 +43,23 @@ SharedMemoryContext *open_resources(const char *shm_path) {
 
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
-    
-    shm_data->shm_fd = shm_open(SHM_PATH, O_RDONLY, S_IRUSR | S_IWUSR);
+
+    shm_data->shm_fd = shm_open(shm_path, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");
 
     shm_data->shm_addr = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shm_data->shm_fd, 0);
     check_error(shm_data->shm_addr == MAP_FAILED, "Failed to map shared memory in view\n");
 
+
     shm_data->sync_semaphore = sem_open(SEM_SYNC_PATH, 0);
     check_error(shm_data->sync_semaphore == SEM_FAILED, "Failed to open sync semaphore in view");
+    int sem_value;
+    sem_getvalue(shm_data->sync_semaphore, &sem_value);
+
 
     shm_data->done_semaphore = sem_open(SEM_DONE_PATH, 0);
     check_error(shm_data->done_semaphore == SEM_FAILED, "Failed to open done sempahore in view");
+     sem_getvalue(shm_data->sync_semaphore, &sem_value);
 
     return shm_data;
 }

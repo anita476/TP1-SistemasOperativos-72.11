@@ -13,7 +13,6 @@ int main() {
     setlinebuf(stdout);
 
     int n;
-
     while ((n = read(STDIN_FILENO, filePath, sizeof(filePath) - 1))) {
         if (n < 0) {
             fprintf(stdout, "An error ocurred while reading the file path");
@@ -48,10 +47,11 @@ int main() {
             continue;
         }
 
-        result[strcspn(result, "\n")] = 0;
+        // Remove newline from result if present
+        // result[strcspn(result, "\n")] = 0;
 
         char output[MAX_RES_LENGTH];
-        int written = snprintf(output, sizeof(output), "%d\t%s\t\t%s\n", getpid(), filePath, result);
+        int written = snprintf(output, sizeof(output), "%d\t%s\t%s\n", getpid(), filePath, result);
         
         if (written < 0 || written >= sizeof(output)) {
             fprintf(stderr, "Slave %d: Error formatting output\n", getpid());
@@ -60,6 +60,8 @@ int main() {
 
         if (write(STDOUT_FILENO, output, written) != written) {
             fprintf(stderr, "Slave %d: Error writing to stdout: %s\n", getpid(), strerror(errno));
+        } else {
+            // fprintf(stderr, "Slave %d: Successfully wrote result to stdout\n", getpid());
         }
 
         pclose(md5sum);        

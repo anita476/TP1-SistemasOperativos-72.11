@@ -49,12 +49,6 @@ typedef struct {
     sem_t *done_semaphore;
     size_t buffer_size; 
     int shm_fd; 
-
-    int current_position;
-
-    char sync_sem_name[NAME_SIZE];
-    char done_sem_name[NAME_SIZE];
-
 } SharedMemoryContext;
 
 SharedMemoryContext *open_resources(const char *shm_path);

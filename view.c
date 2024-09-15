@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     } 
     
     else {
-        fprintf(stderr, "Usage: %s /shm\n", argv[0]);
+        fprintf(stderr, "Usage: %s <sharedMemoryPath>\n", argv[0]);
         exit(EXIT_FAILURE);
     }  
 
@@ -30,31 +30,41 @@ int main(int argc, char *argv[]) {
     char buffer[MAX_RES_LENGTH];
     size_t read_position = 0;
 
+    int sem_value;
+    sem_getvalue(shm_data->sync_semaphore, &sem_value);
+    sem_getvalue(shm_data->done_semaphore, &sem_value);
+    
     while (1) {
-        if (sem_wait(shm_data->sync_semaphore) != 0) {
-            perror("Failed to wait on sync semaphore");
+        sem_wait(shm_data->done_semaphore);
+        sem_wait(shm_data->sync_semaphore);
+
+        if (shm_data->shm_addr[read_position] == '\0') {
+            sem_post(shm_data->sync_semaphore);
             break;
         }
 
-        while (read_position < shm_data->current_position) {
-            size_t remaining = shm_data->current_position - read_position;
-            size_t to_read = (remaining < MAX_RES_LENGTH - 1) ? remaining : (MAX_RES_LENGTH - 1);
-            
-            memcpy(buffer, shm_data->shm_addr + read_position, to_read);
-            buffer[to_read] = '\0';
+        size_t len = 0;
+        while (shm_data->shm_addr[read_position + len] != '\n' && shm_data->shm_addr[read_position + len] != '\0') {
+            len++;
+        }
+                
+        if (len > 0) {
+            memcpy(buffer, shm_data->shm_addr + read_position, len);
+            buffer[len] = '\0';
+            read_position += len + 1;  // +1 to skip the newline
 
-            printf("view>> %s", buffer);
+            printf("view>> %s\n", buffer);
             fflush(stdout);
-
-            read_position += to_read;
         }
         
         sem_post(shm_data->sync_semaphore);
 
-        if (sem_trywait(shm_data->done_semaphore) == 0) {
-            break;
-        }
     }
+    
+
+
+    sem_getvalue(shm_data->sync_semaphore, &sem_value);
+    sem_getvalue(shm_data->done_semaphore, &sem_value);
 
     close_resources(shm_data);
     free(shm_data);

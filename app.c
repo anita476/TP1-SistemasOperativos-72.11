@@ -180,7 +180,6 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
     }
 }
 
-
 int send_file_to_slave(SlaveProcessInfo *slave, const char *filename) {
     ssize_t bytes_written = write(slave->app_to_slave[WRITE_END], filename, strlen(filename));
 

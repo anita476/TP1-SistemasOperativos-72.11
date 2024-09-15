@@ -14,7 +14,7 @@ pre-build:
 	@mkdir -p $(OUT_DIR)
 
 lib.o: lib.c lib.h
-	$(CC) -c $< $(ALL_CFLAGS) -o $@
+	$(CC) -c $< $(ALL_CFLAGS) -o $(OUT_DIR)/$@
 
 md5: app.c lib.o
 	$(CC) $^ $(ALL_CFLAGS) -o $(OUT_DIR)/$@

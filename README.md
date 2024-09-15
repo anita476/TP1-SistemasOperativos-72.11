@@ -10,17 +10,19 @@
 
 ## Instrucciones de Compilación
 
-Para crear el contenedor:
+Para crear el contenedor dentro del directorio que contiene el repositorio:
 
     docker pull agodio/itba-so:3.0-multiplatform
 
-    cd TP1-SistemasOperativos-72.11
+    cd $MyDir
 
     docker run -v "{$PWD}:/root" --security-opt seccomp:unconfined -ti agodio/itba-so:3.0-multiplatform
 
 Una vez iniciado el contenedor, correr los comandos:
 
     cd root
+
+    cd TP1-SistemasOperativos-72.11
 
     make all
 
@@ -45,7 +47,7 @@ Hay tres maneras de correr el programa:
     ./md5 <archivvos>
 
     ./view <ar>
-
+    
 ## Decisiones de Desarrollo
 
 En primer lugar, durante el desarrollo se decidió hacer que el programa slave corriera de manera independiente a los otros dos programas. Esto se consideró correcto bajo la premisa de la modularización y la independencia de programas (dentro de lo posible). 
@@ -80,5 +82,21 @@ Otro problema importante encontrado durante el desarrollo fue el cierre de los `
 
 ## Fragmentos de Código Reutilizado
 
--> acá agregar el esqueleto de manejo de sincronización entre master y slave (dado en clase)
--> agregar lo de los 2 semáforos que se vio en clase
+Para pensar el esqueleto de sincronización entre `app` y `view` se utilizó el pseudo-código visto en clase:
+
+    master(){
+	while(smth){
+		esperar_resultado(...);
+		publicar_resultado_en_shm(...);
+		avisar_resultado_disponible(...);
+	}
+    ///
+    }
+    vista(){
+	while(smth){
+		esperar_resultado(...);
+		leer_resultado_de_shm(...);
+		imprimir_resultado_en_stdout(...);
+	}
+    }
+Para la incorporación de los dos semáforos también se utilizó como base el adt de memoria compartida visto en la clase práctica.

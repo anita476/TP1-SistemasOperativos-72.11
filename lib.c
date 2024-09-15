@@ -36,10 +36,11 @@ SharedMemoryContext *create_resources(int num_files) {
     strncpy(shm->done_sem_name, SEM_DONE_PATH, NAME_SIZE - 1);
     shm->done_sem_name[NAME_SIZE - 1] = '\0'; 
 
-    shm->sync_semaphore = sem_open(SEM_SYNC_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
+    // initialized to 1
+    shm->sync_semaphore = sem_open(SEM_SYNC_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
     check_error(shm->sync_semaphore == SEM_FAILED, "Failed to create sync semaphore");
 
-    shm->done_semaphore = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0); 
+    shm->done_semaphore = sem_open(SEM_DONE_PATH, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1); 
     check_error(shm->done_semaphore == SEM_FAILED, "Failed to create done semaphore");
 
     return shm;
@@ -50,18 +51,27 @@ SharedMemoryContext *open_resources(const char *shm_path) {
 
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
-    // do we use buffer size? 
+
     shm_data->shm_fd = shm_open(SHM_PATH, O_RDONLY, S_IRUSR | S_IWUSR);
     check_error(shm_data->shm_fd == ERROR, "Failed to open shared memory in view");
+    fprintf(stderr, "shm_data fd: %d\n", shm_data->shm_fd);
 
     shm_data->shm_addr = mmap(NULL, SHM_DEF_SIZE, PROT_READ, MAP_SHARED, shm_data->shm_fd, 0);
     check_error(shm_data->shm_addr == MAP_FAILED, "Failed to map shared memory in view\n");
+    fprintf(stderr, "shm_data mapped at address: %s\n", shm_data->shm_addr);
+
 
     shm_data->sync_semaphore = sem_open(SEM_SYNC_PATH, 0);
     check_error(shm_data->sync_semaphore == SEM_FAILED, "Failed to open sync semaphore in view");
+    int sem_value;
+    sem_getvalue(shm_data->sync_semaphore, &sem_value);
+    fprintf(stderr, "Semaphore sync value: %d\n", sem_value);
+
 
     shm_data->done_semaphore = sem_open(SEM_DONE_PATH, 0);
     check_error(shm_data->done_semaphore == SEM_FAILED, "Failed to open done sempahore in view");
+     sem_getvalue(shm_data->sync_semaphore, &sem_value);
+    fprintf(stderr, "Semaphore done value: %d\n", sem_value);
 
     return shm_data;
 }

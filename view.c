@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
             buffer[len] = '\0';
             read_position += len + 1;  // +1 to skip the newline
 
-            printf("view>> %s\n", buffer);
+            printf("%s\n", buffer);
             fflush(stdout);
         }
         

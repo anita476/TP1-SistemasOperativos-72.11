@@ -35,7 +35,7 @@
 
 #define NAME_SIZE 10
 
-#define HEADER "PID\tFILE\t\t\tHASH\n"
+#define HEADER "PID\tFILE\t\tHASH\n"
 
 typedef struct {
     pid_t pid; 

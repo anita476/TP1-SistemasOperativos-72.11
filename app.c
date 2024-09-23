@@ -67,7 +67,6 @@ int main(int argc, char * argv[]) {
     int written = 0;
 
     // Send initial files
-    // Send initial files
     for (int i = 0; i < num_slaves && i < num_files; i++) {
         send_file_to_slave(&slaves[i], argv[i + 1]);
     }
@@ -111,7 +110,8 @@ int main(int argc, char * argv[]) {
             }
         }
     }
-    for(int i = 0; i < num_slaves; i++){
+
+    for(int i = 0; i < num_slaves; i++) {
         kill(slaves[i].pid, SIGKILL);
     } 
 

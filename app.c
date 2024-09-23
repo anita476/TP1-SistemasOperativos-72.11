@@ -202,8 +202,8 @@ void cleanup_resources(SharedMemoryContext *shm, SlaveProcessInfo *slaves, int n
     destroy_resources(shm);
 
     for(int i = 0; i < num_slaves; i++) {
-		fprintf(stderr,"Closing app to slave result: %d\n",close(slaves[i].app_to_slave[WRITE_END]));
-		fprintf(stderr, "Closing slave to app result: %d\n",close(slaves[i].slave_to_app[READ_END]));
+		close(slaves[i].app_to_slave[WRITE_END]);
+		close(slaves[i].slave_to_app[READ_END]);
 	}
 
     free(slaves);

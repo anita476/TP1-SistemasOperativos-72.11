@@ -46,5 +46,5 @@ Hay tres maneras de correr el programa:
 
     ./bin/md5 <archivvos>
 
-    ./bin/view <ar>
+    ./bin/view shm
     

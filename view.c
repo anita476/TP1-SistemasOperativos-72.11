@@ -58,11 +58,8 @@ int main(int argc, char *argv[]) {
         }
         
         sem_post(shm_data->sync_semaphore);
-
     }
     
-
-
     sem_getvalue(shm_data->sync_semaphore, &sem_value);
     sem_getvalue(shm_data->done_semaphore, &sem_value);
 

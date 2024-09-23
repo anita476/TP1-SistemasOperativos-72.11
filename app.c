@@ -114,7 +114,6 @@ int main(int argc, char * argv[]) {
     for(int i = 0; i < num_slaves; i++){
         kill(slaves[i].pid, SIGKILL);
     } 
-    fprintf(stderr, "All slaves killed\n");
 
     sem_post(shm->done_semaphore);
 

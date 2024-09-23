@@ -105,13 +105,15 @@ int main(int argc, char * argv[]) {
                 if (next_to_process < num_files) {
                     send_file_to_slave(&slaves[i], argv[next_to_process + 1]);
                     next_to_process++;
+                }else{
+                    kill(slaves[i].pid, SIGKILL);
                 }
             }
         }
     }
-    for(int i = 0; i < num_slaves; i++){
+    /* for(int i = 0; i < num_slaves; i++){
         kill(slaves[i].pid, SIGKILL);
-    }
+    } */
 
     sem_post(shm->done_semaphore);
 

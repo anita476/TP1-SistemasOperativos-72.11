@@ -79,7 +79,9 @@ int main(int argc, char * argv[]) {
         for (int i = 0; i < num_slaves && processed < num_files; i++) {
             if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
 
-                SlaveProcessInfo *slave = &slaves[i];
+                // PVS warns about slave possibly being null, but the check_error function would have already exited if slaves were null
+                // Slave would never be null due to earlier error handling
+                SlaveProcessInfo *slave = &slaves[i]; 
                 ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, sizeof(buffer) - 1);
 
                 if (bytes_read > 0) {
@@ -112,6 +114,7 @@ int main(int argc, char * argv[]) {
     for(int i = 0; i < num_slaves; i++){
         kill(slaves[i].pid, SIGKILL);
     } 
+    fprintf(stderr, "All slaves killed\n");
 
     sem_post(shm->done_semaphore);
 

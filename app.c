@@ -172,6 +172,9 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
             dup2(slaves[i].slave_to_app[WRITE_END], STDOUT_FILENO);
             close(slaves[i].app_to_slave[READ_END]);
             close(slaves[i].slave_to_app[WRITE_END]);
+
+            close(slaves[i].app_to_slave[WRITE_END]); //pipes que quedaban abiertos
+            close(slaves[i].slave_to_app[READ_END]);
             
             char *const argv[] = {"./slave", NULL};
             execv("./bin/slave", argv);

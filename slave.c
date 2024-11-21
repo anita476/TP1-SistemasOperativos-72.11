@@ -14,6 +14,8 @@ int main() {
 
     int n;
     while ((n = read(STDIN_FILENO, filePath, sizeof(filePath) - 1))) {
+        sleep(10);
+
         if (n < 0) {
             fprintf(stdout, "An error ocurred while reading the file path");
             exit(1);
@@ -59,7 +61,8 @@ int main() {
             fprintf(stderr, "Slave %d: Error writing to stdout: %s\n", getpid(), strerror(errno));
         } 
 
-        pclose(md5sum);        
+        pclose(md5sum);  
+
     }
 
     if (ferror(stdin)) {

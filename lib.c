@@ -12,6 +12,7 @@ void check_error(int condition, const char *message) {
 }
 
 SharedMemoryContext *create_resources(int num_files) {
+    // PVS-Warning but check_error already satisfies it...
     SharedMemoryContext *shm = malloc(sizeof(SharedMemoryContext));
     check_error(shm == NULL, "Failed to allocate memory for shared memory");
 
@@ -40,7 +41,7 @@ SharedMemoryContext *create_resources(int num_files) {
 }
 
 SharedMemoryContext *open_resources(const char *shm_path) {
-
+    // PVS-Warning? 
     SharedMemoryContext *shm_data = malloc(sizeof(SharedMemoryContext));
     check_error(shm_data == NULL, "Failed to allocate memory for shm in view");
 

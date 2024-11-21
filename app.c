@@ -67,7 +67,6 @@ int main(int argc, char * argv[]) {
     int written = 0;
 
     // Send initial files
-    // Send initial files
     for (int i = 0; i < num_slaves && i < num_files; i++) {
         send_file_to_slave(&slaves[i], argv[i + 1]);
     }
@@ -79,7 +78,9 @@ int main(int argc, char * argv[]) {
         for (int i = 0; i < num_slaves && processed < num_files; i++) {
             if (FD_ISSET(slaves[i].slave_to_app[READ_END], &read_fd_set)) {
 
-                SlaveProcessInfo *slave = &slaves[i];
+                // PVS warns about slave possibly being null, but the check_error function would have already exited if slaves were null
+                // Slave would never be null due to earlier error handling
+                SlaveProcessInfo *slave = &slaves[i]; 
                 ssize_t bytes_read = read(slave->slave_to_app[READ_END], buffer, sizeof(buffer) - 1);
 
                 if (bytes_read > 0) {
@@ -109,6 +110,10 @@ int main(int argc, char * argv[]) {
             }
         }
     }
+
+    for(int i = 0; i < num_slaves; i++) {
+        kill(slaves[i].pid, SIGKILL);
+    } 
 
     sem_post(shm->done_semaphore);
 
@@ -167,6 +172,9 @@ void create_slave_processes(int num_slaves, SlaveProcessInfo *slaves) {
             dup2(slaves[i].slave_to_app[WRITE_END], STDOUT_FILENO);
             close(slaves[i].app_to_slave[READ_END]);
             close(slaves[i].slave_to_app[WRITE_END]);
+
+            close(slaves[i].app_to_slave[WRITE_END]); //pipes que quedaban abiertos
+            close(slaves[i].slave_to_app[READ_END]);
             
             char *const argv[] = {"./slave", NULL};
             execv("./bin/slave", argv);
